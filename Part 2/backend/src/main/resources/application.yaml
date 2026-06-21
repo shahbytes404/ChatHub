@@ -1,0 +1,93 @@
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+spring:
+  application:
+    name: chathub-backend
+  web:
+    error:
+      include-message: never
+      include-stacktrace: never
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/chathub}
+    username: ${SPRING_DATASOURCE_USERNAME:chathub}
+    password: ${SPRING_DATASOURCE_PASSWORD:chathub}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: 3000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+  liquibase:
+    enabled: true
+    change-log: classpath:/db/changelog/db.changelog-master.yaml
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      timeout: 2s
+      repositories:
+        enabled: false
+  cache:
+    type: redis
+    redis:
+      time-to-live: 2m
+      cache-null-values: false
+  jackson:
+    default-property-inclusion: non_null
+  threads:
+    virtual:
+      enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  pattern:
+    # %5p INFO, WARN, ERROR
+    # X-Request-Id
+    # INFO [traceId=message-sent]
+    level: "%5p [traceId=%X{traceId:-}]"
+
+chathub:
+  security:
+    jwt-secret: ${CHATHUB_JWT_SECRET:change-this-development-secret-to-atleast-32-bytes}
+    access-token-ttl: 15m
+  websocket:
+    allow-origins: ${CHATHUB_ALLOWED_ORIGINA:http://localhost:4200}
+  presence:
+    ttl: 75s
+  messaging:
+    max-text-length: 4000
+    recent-cache-size: 50
+    stream-key: chathub:message-events
+    consumer-group: chathub-delivery
+    consumer-name: ${HOSTNAME:local-worker}
+    realtime-channel: chathub:realtime
+    outbox-poll-delay-ms: 500
+    delivery-poll-delay-ms: 250
+  rate-limit:
+    messages-per-minute: 60
