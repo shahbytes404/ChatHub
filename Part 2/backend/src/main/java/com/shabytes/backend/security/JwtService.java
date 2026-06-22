@@ -1,6 +1,7 @@
 package com.shabytes.backend.security;
 
 import com.shabytes.backend.domain.UserAccount;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.UUID;
 
 @Service
 public class JwtService {
@@ -36,6 +38,17 @@ public class JwtService {
                 .signWith(signingKey)
                 .compact();
         return new IssuedToken(token, expiresAt);
+    }
+
+    public ChatPrincipal parse(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(signingKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return new ChatPrincipal(UUID.fromString(claims.getSubject()),
+                claims.get("email", String.class));
     }
 
 }
