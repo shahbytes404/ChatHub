@@ -11,3 +11,12 @@ databaseChangeLog:
             relativeToChangelogFile: false
             splitStatements: true
             stripComments: true
+  - changeSet:
+      id: 002-fix-message-type-column
+      author: chathub
+      changes:
+        - sqlFile:
+            path: db/changelog/002-fix-message-type-column.sql
+            relativeToChangelogFile: false
+            splitStatements: true
+            stripComments: true
