@@ -18,4 +18,8 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
     );
 
     Slice<Message> findByConversationIdOrderBySequenceNumberDesc(UUID conversationId, Pageable pageable);
+
+    Optional<Message> findByIdAndConversationId(UUID id, UUID conversationId);
+
+
 }
