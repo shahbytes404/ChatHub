@@ -11,6 +11,7 @@ import com.shabytes.backend.exception.ConflictException;
 import com.shabytes.backend.exception.NotFoundException;
 import com.shabytes.backend.messaging.MessageCreatedEvent;
 import com.shabytes.backend.repository.*;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -46,6 +47,7 @@ public class MessageService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = "recentMessages", allEntries = true)
     public MessageResponse send(UUID senderId, UUID conversationId, SendMessageRequest request) {
         membershipService.requireMember(conversationId, senderId);
 
@@ -122,7 +124,7 @@ public class MessageService {
         return response;
     }
 
-    private MessageResponse toResponse(Message message) {
+    public static MessageResponse toResponse(Message message) {
         return new MessageResponse(
                 message.getId(),
                 message.getConversationId(),
