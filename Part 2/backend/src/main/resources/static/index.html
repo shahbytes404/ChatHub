@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Presence demo</title>
+    <link rel="stylesheet" href="demo.css"/>
+</head>
+<body>
+<div class="shell">
+    <div class="topbar">
+        <h1>Presence Demo</h1>
+        <div id="statusBadge" class="status">
+            <span id="statusText">Disconnect</span>
+        </div>
+    </div>
+
+    <div class="grid">
+        <section class="panel">
+            <div class="panel-header">Connection</div>
+            <div class="panel-body stack">
+                <label> Websocket URL<input id="wsUrl" type="text" value="ws://localhost:8080/ws"></label>
+                <label>JWT Token<input id="token" spellcheck="false" placeholder="Paste access token here" type="text"></label>
+                <label> Conversation ID<input id="conversationId" placeholder="UUID" type="text"></label>
+
+                <div class="buttons">
+                    <button id="connectBtn">Connect</button>
+                    <button id="subscribeBtn" class="secondary" disabled>Subscribe</button>
+                    <button id="disconnectBtn" class="ghost" disabled>Disconnect</button>
+                    <button id="clearBtn" class="danger">Clear log</button>
+                </div>
+
+                <p class="small">Paste the JWT token and conversation ID, then connect each tab separately.</p>
+            </div>
+        </section>
+        <section class="panel chat">
+            <div class="chat-head">
+                <div class="chat-title">
+                    <h1>Actions</h1>
+                    <p>Presence and typing.</p>
+                </div>
+            </div>
+
+            <div class="composer">
+                <div class="buttons">
+                    <button id="typingStartBtn" class="secondary" disabled>Typing on</button>
+                    <button id="typingStopBtn" class="secondary" disabled>Typing off</button>
+                    <button id="heartbeatBtn" class="ghost" disabled>Heartbeat</button>
+                </div>
+
+                <p class="small">
+                    Subscribe to <span class="mono">/user/queue/events</span> to receive live events.
+                </p>
+            </div>
+
+            <div class="activity">
+                <div class="activity-head">
+                    <div class="chat-title">
+                        <h2>Realtime activity</h2>
+                        <p>Presence, typing and server events land here.</p>
+                    </div>
+                </div>
+
+                <div id="log" class="log"></div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+<script src="demo.js"></script>
+</body>
+</html>
+

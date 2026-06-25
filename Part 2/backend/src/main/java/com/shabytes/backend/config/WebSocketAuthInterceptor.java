@@ -21,7 +21,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         var accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
-        if (accessor == null | accessor.getCommand() != StompCommand.CONNECT) {
+        if (accessor == null || accessor.getCommand() != StompCommand.CONNECT) {
             return message;
         }
 
