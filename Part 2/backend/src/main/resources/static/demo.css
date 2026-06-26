@@ -35,6 +35,10 @@ body {
     max-width: 1320px;
     margin: 0 auto;
     padding: 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .topbar {
@@ -80,7 +84,9 @@ h1 {
     display: grid;
     grid-template-columns: 360px minmax(0, 1fr);
     gap: 16px;
-    align-items: start;
+    align-items: stretch;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .panel {
@@ -208,7 +214,7 @@ button:disabled {
 .chat {
     display: flex;
     flex-direction: column;
-    min-height: 760px;
+    min-height: 0;
 }
 
 .chat-head {
