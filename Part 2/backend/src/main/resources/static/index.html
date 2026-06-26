@@ -39,12 +39,17 @@
             <div class="chat-head">
                 <div class="chat-title">
                     <h1>Actions</h1>
-                    <p>Presence and typing.</p>
+                    <p>Presence, typing and messages.</p>
                 </div>
             </div>
 
             <div class="composer">
+                <label>
+                    Message
+                    <textarea id="messageBody" spellcheck="false" placeholder="Write a test message"></textarea>
+                </label>
                 <div class="buttons">
+                    <button id="sendMessageBtn" disabled>Send message</button>
                     <button id="typingStartBtn" class="secondary" disabled>Typing on</button>
                     <button id="typingStopBtn" class="secondary" disabled>Typing off</button>
                     <button id="heartbeatBtn" class="ghost" disabled>Heartbeat</button>

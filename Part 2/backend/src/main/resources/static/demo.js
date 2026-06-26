@@ -9,6 +9,7 @@ const el = (id) => document.getElementById(id);
 const wsUrlEl = el('wsUrl');
 const tokenEl = el('token');
 const conversationEl = el('conversationId');
+const messageBodyEl = el('messageBody');
 const logEl = el('log');
 const statusBadgeEl = el('statusBadge');
 const statusTextEl = el('statusText');
@@ -17,6 +18,7 @@ const connectBtn = el('connectBtn');
 const subscribeBtn = el('subscribeBtn');
 const disconnectBtn = el('disconnectBtn');
 const clearBtn = el('clearBtn');
+const sendMessageBtn = el('sendMessageBtn');
 const typingStartBtn = el('typingStartBtn');
 const typingStopBtn = el('typingStopBtn');
 const heartbeatBtn = el('heartbeatBtn');
@@ -31,6 +33,7 @@ function setStatus(connected) {
     statusTextEl.textContent = connected ? 'Connected' : 'Disconnected';
     connectBtn.disabled = connected;
     subscribeBtn.disabled = !connected;
+    sendMessageBtn.disabled = !connected;
     disconnectBtn.disabled = !connected;
     typingStartBtn.disabled = !connected;
     typingStopBtn.disabled = !connected;
@@ -58,6 +61,14 @@ function prettyJson(value) {
         return JSON.stringify(JSON.parse(value), null, 2);
     }
     return JSON.stringify(value, null, 2);
+}
+
+function safePrettyJson(value) {
+    try {
+        return prettyJson(value);
+    } catch (error) {
+        return typeof value === 'string' ? value : String(value)
+    }
 }
 
 function getToken() {
@@ -118,7 +129,62 @@ function formatEventLabel(event) {
     const type = event?.type || 'EVENT';
     if (type === 'TYPING_STARTED') return 'Typing started';
     if (type === 'TYPING_STOPPED') return 'Typing stopped';
+    if (type === 'MESSAGE_CREATED') return 'Message created';
     return type.replace(/_/g, ' ').toLowerCase();
+}
+
+async function sendMessage() {
+    const conversationId = requireConversationId();
+    const content = messageBodyEl.value.trim();
+    if (!content) {
+        throw new Error('Message content is required');
+    }
+    if (!state.client || !state.connected) {
+        throw new Error('Connect first');
+    }
+
+    const response = await fetch(`/api/conversations/${conversationId}/messages`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({clientMessageId: randomId(), content})
+    })
+
+    if (!response.ok) {
+        throw new Error(await response.text() || `HTTP ${response.status}`);
+    }
+
+    await response.json();
+    messageBodyEl.value = '';
+}
+
+function randomId() {
+    if (crypto?.randomUUID()) {
+        return crypto?.randomUUID();
+    }
+    return `msg_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function renderRealtimeEvent(event, raw) {
+
+    const label = formatEventLabel(event);
+    const payload = event?.payload;
+
+    if (event?.type === 'MESSAGE_CREATED' && payload) {
+        addLog('message received', payload.content || safePrettyJson(payload), [
+            event.conversationId || '',
+            event.actorUserId ? `sender=${event.actorUserId}` : '',
+            event.messageId ? `message=${event.messageId}` : ''
+        ]);
+        return;
+    }
+
+    addLog(label, raw ? safePrettyJson(raw) : safePrettyJson(event), [
+        event?.conversationId || '',
+        event?.actorUserId ? `actor=${event.actorUserId}` : ''
+    ]);
 }
 
 function subscribe() {
@@ -135,11 +201,7 @@ function subscribe() {
         const raw = message.body || '';
         try {
             const event = JSON.parse(raw);
-            const label = formatEventLabel(event);
-            addLog(label, prettyJson(event), [
-                event.conversationId || '',
-                event.actorUserId ? `actor=${event.actorUserId}` : ''
-            ]);
+            renderRealtimeEvent(event, raw);
         } catch (error) {
             addLog('event', raw);
         }
@@ -216,6 +278,8 @@ disconnectBtn.addEventListener('click', disconnect);
 clearBtn.addEventListener('click', () => {
     logEl.innerHTML = '';
 });
+sendMessageBtn.addEventListener('click',
+    () => sendMessage().catch((error) => addLog('error', error.message)))
 typingStartBtn.addEventListener('click',
     () => sendTyping(true).catch((error) => addLog('error', error.message)));
 typingStopBtn.addEventListener('click',
@@ -224,4 +288,4 @@ heartbeatBtn.addEventListener('click',
     () => sendHeartbeat().catch((error) => addLog('error', error.message)));
 
 setStatus(false);
-addLog('ready', 'paste a JWT token and conversation ID, then connetc to start');
+addLog('ready', 'paste a JWT token and conversation ID, then connect to start');
