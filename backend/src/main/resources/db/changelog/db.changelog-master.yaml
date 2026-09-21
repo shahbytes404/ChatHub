@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-users-schema
+      author: chathub
+      changes:
+        - sqlFile:
+            path: db/changelog/001-create-users-schema.sql
+            relativeToChangelogFile: false
+            splitStatements: true
+            stripComments: true
+  - changeSet:
+      id: 002-alter-user-schema
+      author: chathub
+      changes:
+        - sqlFile:
+            path: db/changelog/002-alter-user-schema.sql
+            relativeToChangelogFile: false
+            splitStatements: true
+            stripComments: true
+  - changeSet:
+      id: 003-create-audit-schema
+      author: chathub
+      changes:
+        - sqlFile:
+            path: db/changelog/003-create-audit-event-schema.sql
+            relativeToChangelogFile: false
+            splitStatements: true
+            stripComments: true
