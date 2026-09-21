@@ -1,0 +1,50 @@
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+spring:
+  application:
+    name: chathub-backend
+
+  web:
+    error:
+      include-message: never
+      include-stacktrace: never
+
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/chathub}
+    username: ${SPRING_DATASOURCE_USERNAME:chathub}
+    password: ${SPRING_DATASOURCE_PASSWORD:chathub}
+
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: 3000
+
+  jpa:
+    open-in-view: false
+
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  liquibase:
+    enabled: true
+    change-log: classpath:/db/changelog/db.changelog-master.yaml
+
+  jackson:
+    default-property-inclusion: non_null
+
+chathub:
+  security:
+    jwt-secret: ${CHATHUB_JWT_SECRET:change-this-develpment-secret-to-atleast-32-bytes}
+    access-token-ttl: 7d
+
+websocket:
+  allow-origins: ${CHATHUB_ALLOWED_ORIGINS:http://localhost:4173,http://localhost:4200}

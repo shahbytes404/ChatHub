@@ -1,0 +1,16 @@
+{
+  "Servers": {
+    "1" : {
+      "Name" : "ChatHub PostgreSQL",
+      "Group" : "Servers",
+      "Port" : 5432,
+      "Username" : "chathub",
+      "Password" : "chathub",
+      "Host": "postgres",
+      "SSLMode" : "prefer",
+      "MaintenanceDB" : "chathub",
+      "Shared": false,
+      "Comment" : "ChatHub main database"
+    }
+  }
+}
