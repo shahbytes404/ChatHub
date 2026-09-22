@@ -46,5 +46,5 @@ chathub:
     jwt-secret: ${CHATHUB_JWT_SECRET:change-this-develpment-secret-to-atleast-32-bytes}
     access-token-ttl: 7d
 
-websocket:
-  allow-origins: ${CHATHUB_ALLOWED_ORIGINS:http://localhost:4173,http://localhost:4200}
+  websocket:
+    allow-origins: ${CHATHUB_ALLOWED_ORIGINS:http://localhost:4173,http://localhost:4200}

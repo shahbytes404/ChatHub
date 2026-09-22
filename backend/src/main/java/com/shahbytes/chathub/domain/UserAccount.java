@@ -2,6 +2,7 @@ package com.shahbytes.chathub.domain;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
@@ -11,6 +12,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "users")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Getter
 public class UserAccount {
     @Id
     private UUID id;
@@ -42,14 +44,14 @@ public class UserAccount {
     }
 
     @PrePersist
-    void onCreate(){
+    void onCreate() {
         var now = Instant.now();
         createdAt = now;
         updatedAt = now;
     }
 
     @PreUpdate
-    void onUpdate(){
+    void onUpdate() {
         updatedAt = Instant.now();
     }
 }
