@@ -13,7 +13,7 @@ databaseChangeLog:
       author: chathub
       changes:
         - sqlFile:
-            path: db/changelog/002-alter-user-schema.sql
+            path: db/changelog/002-alter-users-schema.sql
             relativeToChangelogFile: false
             splitStatements: true
             stripComments: true
@@ -22,7 +22,16 @@ databaseChangeLog:
       author: chathub
       changes:
         - sqlFile:
-            path: db/changelog/003-create-audit-event-schema.sql
+            path: db/changelog/003-create-audit-events-schema.sql
+            relativeToChangelogFile: false
+            splitStatements: true
+            stripComments: true
+  - changeSet:
+      id: 004-create-conversations-schema
+      author: chathub
+      changes:
+        - sqlFile:
+            path: db/changelog/004-create-conversations-schema.sql
             relativeToChangelogFile: false
             splitStatements: true
             stripComments: true
