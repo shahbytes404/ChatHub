@@ -1,0 +1,1 @@
+create index idx_member_user on conversation_members (user_id);

@@ -1,5 +1,6 @@
 package com.shahbytes.chathub.domain;
 
+import com.shahbytes.chathub.domain.type.MemberRole;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;

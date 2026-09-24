@@ -1,4 +1,4 @@
-package com.shahbytes.chathub.domain;
+package com.shahbytes.chathub.domain.type;
 
 public enum MemberRole {
     OWNER,

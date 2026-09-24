@@ -1,6 +1,6 @@
 package com.shahbytes.chathub.api.dto;
 
-import com.shahbytes.chathub.domain.MemberRole;
+import com.shahbytes.chathub.domain.type.MemberRole;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.UUID;

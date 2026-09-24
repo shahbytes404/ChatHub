@@ -1,6 +1,6 @@
 package com.shahbytes.chathub.api.dto;
 
-import com.shahbytes.chathub.domain.ConversationType;
+import com.shahbytes.chathub.domain.type.ConversationType;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;

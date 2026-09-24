@@ -1,6 +1,6 @@
 package com.shahbytes.chathub.api.dto;
 
-import com.shahbytes.chathub.domain.ConversationType;
+import com.shahbytes.chathub.domain.type.ConversationType;
 
 import java.time.Instant;
 import java.util.List;
