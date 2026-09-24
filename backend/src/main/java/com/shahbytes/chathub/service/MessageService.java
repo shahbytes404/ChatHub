@@ -9,10 +9,7 @@ import com.shahbytes.chathub.domain.type.ReceiptState;
 import com.shahbytes.chathub.exception.ConflictException;
 import com.shahbytes.chathub.exception.ForbiddenException;
 import com.shahbytes.chathub.exception.NotFoundException;
-import com.shahbytes.chathub.repository.ConversationMemberRepository;
-import com.shahbytes.chathub.repository.ConversationRepository;
-import com.shahbytes.chathub.repository.MessageReceiptRepository;
-import com.shahbytes.chathub.repository.MessageRepository;
+import com.shahbytes.chathub.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +26,7 @@ public class MessageService {
     private final ConversationMemberRepository cmRepository;
     private final MessageReceiptRepository mrRepository;
     private final MessageReceiptStateService receiptStateService;
+    private final UserBlockRepository userBlockRepository;
 
     @Transactional
     public MessageResponse send(
@@ -67,6 +65,19 @@ public class MessageService {
             return toResponse(message, existingState);
         }
 
+        var recipientIds = cmRepository.findRecipientIds(conversationId, senderId);
+
+        var deliverableRecipientIds = recipientIds.stream()
+                .filter(recipientId ->
+                        !userBlockRepository
+                                .existsByBlockerIdAndBlockedId(senderId, recipientId)
+                                &&
+                                !userBlockRepository
+                                        .existsByBlockerIdAndBlockedId(recipientId, senderId)
+
+                ).toList();
+
+
         var conversation = conversationRepository.findByIdForUpdate(conversationId)
                 .orElseThrow(() ->
                         new NotFoundException("Conversation not found"));
@@ -84,9 +95,7 @@ public class MessageService {
 
         messageRepository.save(message);
 
-        var recipientIds = cmRepository.findRecipientIds(conversationId, senderId);
-
-        if (!recipientIds.isEmpty()) {
+        if (!deliverableRecipientIds.isEmpty()) {
             mrRepository.saveAll(
                     recipientIds.stream()
                             .map(recipientId ->
