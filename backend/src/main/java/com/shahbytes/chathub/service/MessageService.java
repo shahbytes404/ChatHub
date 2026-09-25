@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.UUID;
 
 @Service
@@ -67,16 +68,27 @@ public class MessageService {
 
         var recipientIds = cmRepository.findRecipientIds(conversationId, senderId);
 
+        if (recipientIds.isEmpty()) {
+            throw new NotFoundException("No recipients found for the sender");
+        }
+
+        var senderBlockedRecipientIds =
+                userBlockRepository.findBlockedRecipientIds(
+                        senderId, recipientIds
+                );
+
+        var recipientsWhoBlockedSender =
+                userBlockRepository.findRecipientsWhoBlockedSender(
+                        senderId,
+                        recipientIds
+                );
+
+        var blockedRecipientIds = new HashSet<>(senderBlockedRecipientIds);
+        blockedRecipientIds.addAll(recipientsWhoBlockedSender);
+
         var deliverableRecipientIds = recipientIds.stream()
-                .filter(recipientId ->
-                        !userBlockRepository
-                                .existsByBlockerIdAndBlockedId(senderId, recipientId)
-                                &&
-                                !userBlockRepository
-                                        .existsByBlockerIdAndBlockedId(recipientId, senderId)
-
-                ).toList();
-
+                .filter(recipientId -> !blockedRecipientIds.contains(recipientId))
+                .toList();
 
         var conversation = conversationRepository.findByIdForUpdate(conversationId)
                 .orElseThrow(() ->
@@ -97,7 +109,7 @@ public class MessageService {
 
         if (!deliverableRecipientIds.isEmpty()) {
             mrRepository.saveAll(
-                    recipientIds.stream()
+                    deliverableRecipientIds.stream()
                             .map(recipientId ->
                                     new MessageReceipt(
                                             message.getId(),
