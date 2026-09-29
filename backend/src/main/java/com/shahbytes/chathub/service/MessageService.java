@@ -29,6 +29,8 @@ public class MessageService {
     private final MessageReceiptStateService receiptStateService;
     private final UserBlockRepository userBlockRepository;
 
+    private final RateLimitService rateLimitService;
+
     @Transactional
     public MessageResponse send(
             UUID senderId,
@@ -65,6 +67,8 @@ public class MessageService {
 
             return toResponse(message, existingState);
         }
+
+        rateLimitService.checkMessageSend(senderId);
 
         var recipientIds = cmRepository.findRecipientIds(conversationId, senderId);
 

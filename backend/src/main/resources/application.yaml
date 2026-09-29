@@ -38,6 +38,15 @@ spring:
     enabled: true
     change-log: classpath:/db/changelog/db.changelog-master.yaml
 
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      timeout: 2s
+
+      repositories:
+        enabled: false
+  
   jackson:
     default-property-inclusion: non_null
 
@@ -48,3 +57,6 @@ chathub:
 
   websocket:
     allow-origins: ${CHATHUB_ALLOWED_ORIGINS:http://localhost:4173,http://localhost:4200}
+
+  rate-limit:
+    messages-per-minute: ${CHATHUB_RATE_LIMIT_MESSAGES_PER_MINUTE:60}
