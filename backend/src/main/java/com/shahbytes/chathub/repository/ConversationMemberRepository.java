@@ -19,7 +19,7 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
     );
 
     @Query("""
-                SELECT new com.shahbytes.chathub.api.dto.MemberResponse(
+                SELECT new com.shahbytes.chathub.api.dto.response.MemberResponse(
                     cm.userId, u.displayName, cm.role, cm.lastReadSequence
                     )
                     FROM ConversationMember cm
@@ -32,7 +32,7 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
     );
 
     @Query("""
-                SELECT new com.shahbytes.chathub.api.dto.ConversationMemberResponse(
+                SELECT new com.shahbytes.chathub.api.dto.response.ConversationMemberResponse(
                     cm.conversationId, cm.userId, u.displayName, cm.role, cm.lastReadSequence
                     )
                     FROM ConversationMember cm
