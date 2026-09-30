@@ -1,4 +1,4 @@
-package com.shahbytes.chathub.api.dto;
+package com.shahbytes.chathub.api.dto.request;
 
 import com.shahbytes.chathub.domain.type.ReceiptType;
 import jakarta.validation.constraints.NotNull;

@@ -1,4 +1,4 @@
-package com.shahbytes.chathub.api.dto;
+package com.shahbytes.chathub.api.dto.response;
 
 import java.util.List;
 

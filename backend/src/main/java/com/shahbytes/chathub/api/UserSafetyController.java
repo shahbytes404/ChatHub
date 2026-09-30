@@ -1,7 +1,7 @@
 package com.shahbytes.chathub.api;
 
-import com.shahbytes.chathub.api.dto.BlockStatusResponse;
-import com.shahbytes.chathub.api.dto.BlockUserRequest;
+import com.shahbytes.chathub.api.dto.response.BlockStatusResponse;
+import com.shahbytes.chathub.api.dto.request.BlockUserRequest;
 import com.shahbytes.chathub.security.CurrentUser;
 import com.shahbytes.chathub.service.UserSafetyService;
 import jakarta.validation.Valid;

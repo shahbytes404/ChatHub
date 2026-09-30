@@ -1,7 +1,7 @@
 package com.shahbytes.chathub.service;
 
-import com.shahbytes.chathub.api.dto.ReceiptRequest;
-import com.shahbytes.chathub.api.dto.ReceiptResponse;
+import com.shahbytes.chathub.api.dto.request.ReceiptRequest;
+import com.shahbytes.chathub.api.dto.response.ReceiptResponse;
 import com.shahbytes.chathub.exception.ForbiddenException;
 import com.shahbytes.chathub.exception.NotFoundException;
 import com.shahbytes.chathub.repository.ConversationMemberRepository;

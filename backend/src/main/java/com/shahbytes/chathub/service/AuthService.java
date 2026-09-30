@@ -1,8 +1,8 @@
 package com.shahbytes.chathub.service;
 
-import com.shahbytes.chathub.api.dto.AuthResponse;
-import com.shahbytes.chathub.api.dto.LoginRequest;
-import com.shahbytes.chathub.api.dto.RegisterRequest;
+import com.shahbytes.chathub.api.dto.response.AuthResponse;
+import com.shahbytes.chathub.api.dto.request.LoginRequest;
+import com.shahbytes.chathub.api.dto.request.RegisterRequest;
 import com.shahbytes.chathub.domain.UserAccount;
 import com.shahbytes.chathub.exception.ConflictException;
 import com.shahbytes.chathub.exception.ForbiddenException;

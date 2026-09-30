@@ -1,7 +1,7 @@
 package com.shahbytes.chathub.service;
 
-import com.shahbytes.chathub.api.dto.MessageResponse;
-import com.shahbytes.chathub.api.dto.SendMessageRequest;
+import com.shahbytes.chathub.api.dto.response.MessageResponse;
+import com.shahbytes.chathub.api.dto.request.SendMessageRequest;
 import com.shahbytes.chathub.domain.Message;
 import com.shahbytes.chathub.domain.MessageReceipt;
 import com.shahbytes.chathub.domain.type.MessageType;
@@ -133,7 +133,7 @@ public class MessageService {
             UUID conversationId,
             String content,
             List<UUID> recipientIds
-    ){
+    ) {
         var conversation = conversationRepository.findByIdForUpdate(conversationId)
                 .orElseThrow(() ->
                         new NotFoundException("Conversation not found"));

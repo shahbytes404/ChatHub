@@ -1,11 +1,10 @@
 package com.shahbytes.chathub.api;
 
-import com.shahbytes.chathub.api.dto.MessageResponse;
-import com.shahbytes.chathub.api.dto.ReceiptRequest;
-import com.shahbytes.chathub.api.dto.ReceiptResponse;
-import com.shahbytes.chathub.api.dto.SendMessageRequest;
+import com.shahbytes.chathub.api.dto.response.MessageResponse;
+import com.shahbytes.chathub.api.dto.request.ReceiptRequest;
+import com.shahbytes.chathub.api.dto.response.ReceiptResponse;
+import com.shahbytes.chathub.api.dto.request.SendMessageRequest;
 import com.shahbytes.chathub.security.CurrentUser;
-import com.shahbytes.chathub.service.MessageReceiptStateService;
 import com.shahbytes.chathub.service.MessageService;
 import com.shahbytes.chathub.service.ReceiptService;
 import jakarta.validation.Valid;

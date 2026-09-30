@@ -1,4 +1,4 @@
-package com.shahbytes.chathub.api.dto;
+package com.shahbytes.chathub.api.dto.response;
 
 import com.shahbytes.chathub.domain.type.MessageType;
 import com.shahbytes.chathub.domain.type.ReceiptState;

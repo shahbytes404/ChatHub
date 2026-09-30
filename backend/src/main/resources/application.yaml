@@ -55,6 +55,9 @@ chathub:
     jwt-secret: ${CHATHUB_JWT_SECRET:change-this-develpment-secret-to-atleast-32-bytes}
     access-token-ttl: 7d
 
+  messaging:
+    realtime-channel: ${CHATHUB_REALTIME_CHANNEL:chathub:realtime}
+
   websocket:
     allow-origins: ${CHATHUB_ALLOWED_ORIGINS:http://localhost:4173,http://localhost:4200}
 

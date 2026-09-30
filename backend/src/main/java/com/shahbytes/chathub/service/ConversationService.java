@@ -1,6 +1,11 @@
 package com.shahbytes.chathub.service;
 
-import com.shahbytes.chathub.api.dto.*;
+import com.shahbytes.chathub.api.dto.request.AddMemberRequest;
+import com.shahbytes.chathub.api.dto.request.CreateConversationRequest;
+import com.shahbytes.chathub.api.dto.request.UpdateConversationRequest;
+import com.shahbytes.chathub.api.dto.response.ConversationMemberResponse;
+import com.shahbytes.chathub.api.dto.response.ConversationResponse;
+import com.shahbytes.chathub.api.dto.response.MemberResponse;
 import com.shahbytes.chathub.domain.Conversation;
 import com.shahbytes.chathub.domain.ConversationMember;
 import com.shahbytes.chathub.domain.type.ConversationType;
@@ -82,11 +87,11 @@ public class ConversationService {
 
         convMemberRepository.saveAll(members);
 
-        if(request.type() == ConversationType.GROUP){
+        if (request.type() == ConversationType.GROUP) {
             var creatorName = users.stream()
                     .filter(user -> user.getId().equals(creatorId))
                     .findFirst()
-                    .orElseThrow(()->new NotFoundException("Creator not found"))
+                    .orElseThrow(() -> new NotFoundException("Creator not found"))
                     .getDisplayName();
 
             var recipientIds = members.stream().map(ConversationMember::getUserId).toList();
@@ -200,10 +205,10 @@ public class ConversationService {
         convMemberRepository.save(newMember);
 
         var joinedUser = userAccountRepository.findById(request.userId())
-                .orElseThrow(()->new NotFoundException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
 
         var recipientIds = convMemberRepository.
-                    findAllByConversationId(conversationId).stream()
+                findAllByConversationId(conversationId).stream()
                 .map(ConversationMember::getUserId).toList();
 
         messageService.sendSystemMessage(
@@ -289,7 +294,7 @@ public class ConversationService {
 
         conversation.rename(request.title());
 
-        var actor =  userAccountRepository.findById(actorId)
+        var actor = userAccountRepository.findById(actorId)
                 .orElseThrow(() -> new NotFoundException("Actor not found"));
 
         var recipientIds = convMemberRepository.findAllByConversationId(conversationId).stream()

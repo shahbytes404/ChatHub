@@ -1,9 +1,9 @@
 package com.shahbytes.chathub.api;
 
-import com.shahbytes.chathub.api.dto.AddMemberRequest;
-import com.shahbytes.chathub.api.dto.ConversationResponse;
-import com.shahbytes.chathub.api.dto.CreateConversationRequest;
-import com.shahbytes.chathub.api.dto.UpdateConversationRequest;
+import com.shahbytes.chathub.api.dto.request.AddMemberRequest;
+import com.shahbytes.chathub.api.dto.response.ConversationResponse;
+import com.shahbytes.chathub.api.dto.request.CreateConversationRequest;
+import com.shahbytes.chathub.api.dto.request.UpdateConversationRequest;
 import com.shahbytes.chathub.security.CurrentUser;
 import com.shahbytes.chathub.service.ConversationService;
 import jakarta.validation.Valid;

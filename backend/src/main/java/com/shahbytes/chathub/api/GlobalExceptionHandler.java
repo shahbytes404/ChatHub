@@ -1,7 +1,7 @@
 package com.shahbytes.chathub.api;
 
-import com.shahbytes.chathub.api.dto.ApiError;
-import com.shahbytes.chathub.api.dto.FieldViolation;
+import com.shahbytes.chathub.api.dto.response.ApiError;
+import com.shahbytes.chathub.api.dto.response.FieldViolation;
 import com.shahbytes.chathub.exception.ConflictException;
 import com.shahbytes.chathub.exception.ForbiddenException;
 import com.shahbytes.chathub.exception.NotFoundException;
