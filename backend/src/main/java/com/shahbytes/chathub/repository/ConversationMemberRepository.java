@@ -56,4 +56,6 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
             UUID conversationId,
             UUID senderId
     );
+
+    List<ConversationMember> findAllByConversationId(UUID conversationId);
 }

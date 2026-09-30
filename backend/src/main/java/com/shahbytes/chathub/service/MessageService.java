@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -124,6 +125,32 @@ public class MessageService {
         }
 
         return toResponse(message, ReceiptState.SENT);
+    }
+
+    @Transactional
+    public MessageResponse sendSystemMessage(
+            UUID actorId,
+            UUID conversationId,
+            String content,
+            List<UUID> recipientIds
+    ){
+        var conversation = conversationRepository.findByIdForUpdate(conversationId)
+                .orElseThrow(() ->
+                        new NotFoundException("Conversation not found"));
+
+        long sequenceNumber = conversation.allocateNextMessageSequence();
+
+        var message = new Message(
+                conversationId,
+                actorId,
+                "system-" + UUID.randomUUID(),
+                sequenceNumber,
+                MessageType.SYSTEM,
+                content
+        );
+        messageRepository.save(message);
+
+        return toResponse(message, null);
     }
 
     public static MessageResponse toResponse(Message message, ReceiptState state) {
