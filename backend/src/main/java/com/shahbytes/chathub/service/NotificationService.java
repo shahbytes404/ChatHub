@@ -36,7 +36,7 @@ public class NotificationService {
             return;
         }
 
-        deviceRepository.findAllByUserIdAndNotificationsEnabled(userId)
+        deviceRepository.findAllByUserIdAndNotificationsEnabledTrue(userId)
                 .stream()
                 .filter(
                         device -> device.getPushToken() != null

@@ -11,5 +11,5 @@ public interface DeviceRegistrationRepository extends JpaRepository<DeviceRegist
 
     Optional<DeviceRegistration> findByUserIdAndDeviceId(UUID userId, String deviceId);
 
-    List<DeviceRegistration> findAllByUserIdAndNotificationsEnabled(UUID userId);
+    List<DeviceRegistration> findAllByUserIdAndNotificationsEnabledTrue(UUID userId);
 }
