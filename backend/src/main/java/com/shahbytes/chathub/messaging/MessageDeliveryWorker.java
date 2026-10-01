@@ -201,7 +201,6 @@ public class MessageDeliveryWorker {
             );
         } catch (RuntimeException ignored) {
             // ignored
-            ignored.printStackTrace();
         }
     }
 
