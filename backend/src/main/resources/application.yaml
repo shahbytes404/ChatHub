@@ -63,6 +63,9 @@ chathub:
     outbox-poll-delay-ms: 100
     delivery-poll-delay-ms: 100
 
+  presence:
+    ttl: 30s
+
   websocket:
     allow-origins: ${CHATHUB_ALLOWED_ORIGINS:http://localhost:4173,http://localhost:4200}
 
