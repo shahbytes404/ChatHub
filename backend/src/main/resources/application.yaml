@@ -57,6 +57,11 @@ chathub:
 
   messaging:
     realtime-channel: ${CHATHUB_REALTIME_CHANNEL:chathub:realtime}
+    stream-key: chathub:message-events
+    consumer-group: chathub-delivery
+    consumer-name: ${HOSTNAME:local-worker}
+    outbox-poll-delay-ms: 100
+    delivery-poll-delay-ms: 100
 
   websocket:
     allow-origins: ${CHATHUB_ALLOWED_ORIGINS:http://localhost:4173,http://localhost:4200}

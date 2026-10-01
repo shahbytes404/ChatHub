@@ -71,3 +71,12 @@ databaseChangeLog:
             relativeToChangelogFile: false
             splitStatements: true
             stripComments: true
+  - changeSet:
+      id: 009-create-outbox-schema
+      author: chathub
+      changes:
+        - sqlFile:
+            path: db/changelog/009-create-outbox-schema.sql
+            relativeToChangelogFile: false
+            splitStatements: true
+            stripComments: true

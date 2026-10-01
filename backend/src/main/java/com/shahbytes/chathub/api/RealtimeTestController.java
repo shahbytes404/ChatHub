@@ -1,4 +1,4 @@
-package com.shahbytes.chathub;
+package com.shahbytes.chathub.api;
 
 import com.shahbytes.chathub.api.dto.event.RealtimeEvent;
 import com.shahbytes.chathub.messaging.RedisRealtimePublisher;

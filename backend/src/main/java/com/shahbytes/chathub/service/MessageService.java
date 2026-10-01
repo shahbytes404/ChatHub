@@ -1,9 +1,11 @@
 package com.shahbytes.chathub.service;
 
+import com.shahbytes.chathub.api.dto.event.MessageCreatedEvent;
 import com.shahbytes.chathub.api.dto.response.MessageResponse;
 import com.shahbytes.chathub.api.dto.request.SendMessageRequest;
 import com.shahbytes.chathub.domain.Message;
 import com.shahbytes.chathub.domain.MessageReceipt;
+import com.shahbytes.chathub.domain.OutboxEvent;
 import com.shahbytes.chathub.domain.type.MessageType;
 import com.shahbytes.chathub.domain.type.ReceiptState;
 import com.shahbytes.chathub.exception.ConflictException;
@@ -13,9 +15,12 @@ import com.shahbytes.chathub.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -30,7 +35,12 @@ public class MessageService {
     private final MessageReceiptStateService receiptStateService;
     private final UserBlockRepository userBlockRepository;
 
+    private final OutboxRepository outboxRepository;
+    private final AuditService auditService;
+
     private final RateLimitService rateLimitService;
+
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public MessageResponse send(
@@ -124,7 +134,34 @@ public class MessageService {
             );
         }
 
-        return toResponse(message, ReceiptState.SENT);
+        var response = toResponse(message, ReceiptState.SENT);
+
+        outboxRepository.save(
+                new OutboxEvent(
+                        "MESSAGE",
+                        message.getId(),
+                        "MESSAGE_CREATED",
+                        toJson(
+                                new MessageCreatedEvent(
+                                        response,
+                                        deliverableRecipientIds
+                                )
+                        )
+                )
+        );
+
+        auditService.record(
+                senderId,
+                "MESSAGE_SENT",
+                "MESSAGE",
+                message.getId().toString(),
+                Map.of(
+                        "conversationId", conversationId,
+                        "sequence", sequenceNumber
+                )
+        );
+
+        return response;
     }
 
     @Transactional
@@ -165,5 +202,13 @@ public class MessageService {
                 message.getCreatedAt(),
                 state
         );
+    }
+
+    private String toJson(MessageCreatedEvent event) {
+        try {
+            return objectMapper.writeValueAsString(event);
+        } catch (JacksonException exception) {
+            throw new IllegalStateException("Could not serialize message event", exception);
+        }
     }
 }
