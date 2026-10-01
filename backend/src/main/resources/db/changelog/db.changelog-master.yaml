@@ -80,3 +80,21 @@ databaseChangeLog:
             relativeToChangelogFile: false
             splitStatements: true
             stripComments: true
+  - changeSet:
+      id: 010-create-device-registration-schema
+      author: chathub
+      changes:
+        - sqlFile:
+            path: db/changelog/010-create-device-registration-schema.sql
+            relativeToChangelogFile: false
+            splitStatements: true
+            stripComments: true
+  - changeSet:
+      id: 011-alter-conversation-member-add-muted-schema
+      author: chathub
+      changes:
+        - sqlFile:
+            path: db/changelog/011-alter-conversation-member-add-muted-schema.sql
+            relativeToChangelogFile: false
+            splitStatements: true
+            stripComments: true

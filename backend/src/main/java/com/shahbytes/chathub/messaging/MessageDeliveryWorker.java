@@ -4,6 +4,8 @@ import com.shahbytes.chathub.api.dto.event.MessageCreatedEvent;
 import com.shahbytes.chathub.api.dto.event.RealtimeEvent;
 import com.shahbytes.chathub.domain.ProcessedEvent;
 import com.shahbytes.chathub.repository.ProcessedEventRepository;
+import com.shahbytes.chathub.service.NotificationService;
+import com.shahbytes.chathub.service.PresenceService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Range;
 import org.springframework.data.redis.connection.stream.*;
@@ -29,6 +31,9 @@ public class MessageDeliveryWorker {
 
     private final RedisRealtimePublisher redisRealtimePublisher;
 
+    private final PresenceService presenceService;
+    private final NotificationService notificationService;
+
     private final String streamKey;
     private final String consumerGroup;
     private final String consumerName;
@@ -38,7 +43,7 @@ public class MessageDeliveryWorker {
             StringRedisTemplate redisTemplate,
             ObjectMapper objectMapper,
             ProcessedEventRepository processedEventRepository,
-            RedisRealtimePublisher redisRealtimePublisher,
+            RedisRealtimePublisher redisRealtimePublisher, PresenceService presenceService, NotificationService notificationService,
             @Value("${chathub.messaging.stream-key}")
             String streamKey,
             @Value("${chathub.messaging.consumer-group}")
@@ -49,6 +54,8 @@ public class MessageDeliveryWorker {
         this.objectMapper = objectMapper;
         this.processedEventRepository = processedEventRepository;
         this.redisRealtimePublisher = redisRealtimePublisher;
+        this.presenceService = presenceService;
+        this.notificationService = notificationService;
         this.streamKey = streamKey;
         this.consumerGroup = consumerGroup;
         this.consumerName = consumerName;
@@ -157,17 +164,22 @@ public class MessageDeliveryWorker {
             );
 
             for (var recipientId : event.recipientIds()) {
-                var realtimeEvent = new RealtimeEvent(
-                        "MESSAGE_CREATED",
-                        recipientId,
-                        event.message().conversationId(),
-                        event.message().senderId(),
-                        event.message().id(),
-                        event.message(),
-                        Instant.now()
-                );
+                if (presenceService.isOnline(recipientId)) {
+                    var realtimeEvent = new RealtimeEvent(
+                            "MESSAGE_CREATED",
+                            recipientId,
+                            event.message().conversationId(),
+                            event.message().senderId(),
+                            event.message().id(),
+                            event.message(),
+                            Instant.now()
+                    );
 
-                redisRealtimePublisher.publish(realtimeEvent);
+                    redisRealtimePublisher.publish(realtimeEvent);
+                } else {
+                    notificationService.notifyOfflineUser(recipientId, event.message());
+                }
+
             }
 
             processedEventRepository.save(

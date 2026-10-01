@@ -33,6 +33,9 @@ public class ConversationMember {
     @Column(name = "joined_at", nullable = false, updatable = false)
     private Instant joinedAt;
 
+    @Column(name = "muted_until")
+    private Instant mutedUntil;
+
     public ConversationMember(UUID conversationId, UUID userId, MemberRole role) {
         this.id = UUID.randomUUID();
         this.conversationId = conversationId;
@@ -44,6 +47,10 @@ public class ConversationMember {
     @PrePersist
     void onCreate() {
         this.joinedAt = Instant.now();
+    }
+
+    public boolean isMutedAt(Instant now) {
+        return mutedUntil != null && mutedUntil.isAfter(now);
     }
 
     public void markReadThrough(long sequence) {
