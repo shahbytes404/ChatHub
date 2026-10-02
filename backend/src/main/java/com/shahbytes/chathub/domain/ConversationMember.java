@@ -36,6 +36,9 @@ public class ConversationMember {
     @Column(name = "muted_until")
     private Instant mutedUntil;
 
+    @Column(name = "hidden_after_sequence")
+    private Long hiddenAfterSequence;
+
     public ConversationMember(UUID conversationId, UUID userId, MemberRole role) {
         this.id = UUID.randomUUID();
         this.conversationId = conversationId;

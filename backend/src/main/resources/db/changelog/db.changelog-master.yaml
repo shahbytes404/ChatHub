@@ -98,3 +98,12 @@ databaseChangeLog:
             relativeToChangelogFile: false
             splitStatements: true
             stripComments: true
+  - changeSet:
+      id: 012-alter-conversation-member-add-hidden-after-sequence-schema
+      author: chathub
+      changes:
+        - sqlFile:
+            path: db/changelog/012-alter-conversation-member-add-hidden-after-sequence-schema.sql
+            relativeToChangelogFile: false
+            splitStatements: true
+            stripComments: true
