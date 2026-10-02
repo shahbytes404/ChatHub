@@ -70,4 +70,21 @@ public class ConversationController {
     ) {
         return conversationService.update(currentUser.id(authentication), conversationId, request);
     }
+
+    @DeleteMapping("/{conversationId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(
+            Authentication authentication,
+            @PathVariable("conversationId") UUID conversationId,
+            @RequestParam(
+                    name = "permanent",
+                    defaultValue = "false"
+            ) boolean permanent
+    ) {
+        conversationService.deleteForUser(
+                currentUser.id(authentication),
+                conversationId,
+                permanent
+        );
+    }
 }

@@ -146,6 +146,10 @@ public class MessageDeliveryWorker {
                 record.getValue().get("eventId")
         );
 
+        var eventType = String.valueOf(
+                record.getValue().get("eventType")
+        );
+
         var payloadJson = String.valueOf(
                 record.getValue().get("payloadJson")
         );
@@ -158,29 +162,47 @@ public class MessageDeliveryWorker {
                 return;
             }
 
-            var event = objectMapper.readValue(
-                    payloadJson,
-                    MessageCreatedEvent.class
-            );
-
-            for (var recipientId : event.recipientIds()) {
-                if (presenceService.isOnline(recipientId)) {
-                    var realtimeEvent = new RealtimeEvent(
-                            "MESSAGE_CREATED",
-                            recipientId,
-                            event.message().conversationId(),
-                            event.message().senderId(),
-                            event.message().id(),
-                            event.message(),
-                            Instant.now()
+            switch (eventType) {
+                case "MESSAGE_CREATED" -> {
+                    var event = objectMapper.readValue(
+                            payloadJson,
+                            MessageCreatedEvent.class
                     );
 
-                    redisRealtimePublisher.publish(realtimeEvent);
-                } else {
-                    notificationService.notifyOfflineUser(recipientId, event.message());
+                    for (var recipientId : event.recipientIds()) {
+                        if (presenceService.isOnline(recipientId)) {
+                            var realtimeEvent = new RealtimeEvent(
+                                    "MESSAGE_CREATED",
+                                    recipientId,
+                                    event.message().conversationId(),
+                                    event.message().senderId(),
+                                    event.message().id(),
+                                    event.message(),
+                                    Instant.now()
+                            );
+
+                            redisRealtimePublisher.publish(realtimeEvent);
+                        } else {
+                            notificationService.notifyOfflineUser(recipientId, event.message());
+                        }
+
+                    }
                 }
 
+                case "CONVERSATION_REMOVED" -> {
+                    var event = objectMapper.readValue(
+                            payloadJson,
+                            RealtimeEvent.class
+                    );
+
+                    redisRealtimePublisher.publish(event);
+                }
+
+                default -> throw new IllegalStateException(
+                        "Unknown outbox event type: " + eventType
+                );
             }
+
 
             processedEventRepository.save(
                     new ProcessedEvent(

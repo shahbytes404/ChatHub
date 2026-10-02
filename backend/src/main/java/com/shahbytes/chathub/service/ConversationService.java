@@ -1,5 +1,6 @@
 package com.shahbytes.chathub.service;
 
+import com.shahbytes.chathub.api.dto.event.RealtimeEvent;
 import com.shahbytes.chathub.api.dto.request.AddMemberRequest;
 import com.shahbytes.chathub.api.dto.request.CreateConversationRequest;
 import com.shahbytes.chathub.api.dto.request.UpdateConversationRequest;
@@ -8,21 +9,21 @@ import com.shahbytes.chathub.api.dto.response.ConversationResponse;
 import com.shahbytes.chathub.api.dto.response.MemberResponse;
 import com.shahbytes.chathub.domain.Conversation;
 import com.shahbytes.chathub.domain.ConversationMember;
+import com.shahbytes.chathub.domain.Message;
+import com.shahbytes.chathub.domain.OutboxEvent;
 import com.shahbytes.chathub.domain.type.ConversationType;
 import com.shahbytes.chathub.domain.type.MemberRole;
 import com.shahbytes.chathub.exception.ConflictException;
 import com.shahbytes.chathub.exception.NotFoundException;
-import com.shahbytes.chathub.repository.ConversationMemberRepository;
-import com.shahbytes.chathub.repository.ConversationRepository;
-import com.shahbytes.chathub.repository.UserAccountRepository;
+import com.shahbytes.chathub.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.time.Instant;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,9 +33,15 @@ public class ConversationService {
     private final UserAccountRepository userAccountRepository;
     private final ConversationRepository conversationRepository;
     private final ConversationMemberRepository convMemberRepository;
+    private final MessageRepository messageRepository;
 
     private final MembershipService membershipService;
     private final MessageService messageService;
+
+    private final ObjectMapper objectMapper;
+
+    private final OutboxRepository outboxRepository;
+    private final AuditService auditService;
 
     @Transactional
     public ConversationResponse create(UUID creatorId, CreateConversationRequest request) {
@@ -310,6 +317,121 @@ public class ConversationService {
         );
 
         return toResponse(conversation);
+    }
+
+    @Transactional
+    public void deleteForUser(
+            UUID actorId,
+            UUID conversationId,
+            boolean permanent
+    ) {
+        var actor = membershipService.requireMember(conversationId, actorId);
+
+        var conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new NotFoundException("Conversation not found"));
+
+        if (permanent
+                && (
+                conversation.getType() != ConversationType.GROUP
+                        || actor.getRole() != MemberRole.OWNER
+        )) {
+            throw new ConflictException(
+                    "Permanent delete is only available to the group owner"
+            );
+        }
+
+        if (permanent) {
+            var members = convMemberRepository.findAllByConversationId(conversationId);
+
+            for (var member : members) {
+                outboxRepository.save(
+                        createConversationRemovedEvent(
+                                member.getUserId(),
+                                conversationId,
+                                actorId,
+                                true
+                        )
+                );
+            }
+
+            conversationRepository.deleteById(conversationId);
+
+            auditService.record(
+                    actorId,
+                    "CONVERSATION_DELETED",
+                    "CONVERSATION",
+                    conversationId.toString(),
+                    Map.of(
+                            "scope", "GROUP_HARD_DELETE"
+                    )
+            );
+
+            return;
+        }
+
+        var latestSequence =
+                messageRepository
+                        .findTopByConversationIdOrderBySequenceNumberDesc(conversationId)
+                        .map(Message::getSequenceNumber)
+                        .orElse(0L);
+
+        actor.softHideAt(latestSequence);
+
+        convMemberRepository.save(actor);
+
+        outboxRepository.save(
+                createConversationRemovedEvent(
+                        actorId,
+                        conversationId,
+                        actorId,
+                        false
+                )
+        );
+
+        auditService.record(
+                actorId,
+                "CONVERSATION_DELETED_FOR_USER",
+                "CONVERSATION",
+                conversationId.toString(),
+                Map.of()
+        );
+    }
+
+    private OutboxEvent createConversationRemovedEvent(
+            UUID targetUserId,
+            UUID conversationId,
+            UUID actorId,
+            boolean permanent
+    ) {
+        var event = new RealtimeEvent(
+                "CONVERSATION_REMOVED",
+                targetUserId,
+                conversationId,
+                actorId,
+                null,
+                Map.of(
+                        "conversationId", conversationId,
+                        "permanent", permanent
+                ),
+                Instant.now()
+        );
+
+        return new OutboxEvent(
+                "CONVERSATION",
+                conversationId,
+                "CONVERSATION_REMOVED",
+                toJson(event)
+        );
+    }
+
+    private String toJson(RealtimeEvent event) {
+        try {
+            return objectMapper.writeValueAsString(event);
+        } catch (JacksonException exception) {
+            throw new IllegalStateException(
+                    "Could not serialize conversation event", exception
+            );
+        }
     }
 
     private ConversationResponse toResponse(Conversation conversation) {

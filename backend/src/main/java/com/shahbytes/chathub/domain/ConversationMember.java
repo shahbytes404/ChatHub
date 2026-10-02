@@ -59,4 +59,14 @@ public class ConversationMember {
     public void markReadThrough(long sequence) {
         lastReadSequence = Math.max(lastReadSequence, sequence);
     }
+
+    public void softHideAt(long latestSequence) {
+        if (hiddenAfterSequence == null || latestSequence > hiddenAfterSequence) {
+            hiddenAfterSequence = latestSequence;
+        }
+    }
+
+    public boolean isHiddenFor(long latestSequence) {
+        return hiddenAfterSequence != null && latestSequence <= hiddenAfterSequence;
+    }
 }
