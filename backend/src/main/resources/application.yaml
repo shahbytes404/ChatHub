@@ -33,6 +33,8 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+        order_updates: true
+        order_inserts: true
 
   liquibase:
     enabled: true

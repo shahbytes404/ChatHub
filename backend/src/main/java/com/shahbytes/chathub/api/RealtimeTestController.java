@@ -1,6 +1,7 @@
 package com.shahbytes.chathub.api;
 
 import com.shahbytes.chathub.api.dto.event.RealtimeEvent;
+import com.shahbytes.chathub.domain.type.EventType;
 import com.shahbytes.chathub.messaging.RedisRealtimePublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,7 +22,7 @@ public class RealtimeTestController {
     @PostMapping("/{userId}")
     public void test(@PathVariable UUID userId) {
         var event = new RealtimeEvent(
-                "TEST",
+                EventType.TEST,
                 userId,
                 null,
                 null,

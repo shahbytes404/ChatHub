@@ -3,6 +3,7 @@ package com.shahbytes.chathub.service;
 import com.shahbytes.chathub.api.dto.event.RealtimeEvent;
 import com.shahbytes.chathub.domain.ConversationMember;
 import com.shahbytes.chathub.domain.UserAccount;
+import com.shahbytes.chathub.domain.type.EventType;
 import com.shahbytes.chathub.messaging.RedisRealtimePublisher;
 import com.shahbytes.chathub.repository.ConversationMemberRepository;
 import com.shahbytes.chathub.repository.UserAccountRepository;
@@ -39,8 +40,8 @@ public class TypingService {
                 .filter(userId -> !userId.equals(actorId))
                 .forEach(targetUserId -> {
                     var evenType = typing
-                            ? "TYPING_STARTED"
-                            : "TYPING_STOPPED";
+                            ? EventType.TYPING_STARTED
+                            : EventType.TYPING_STOPPED;
 
                     publisher.publish(
                             new RealtimeEvent(

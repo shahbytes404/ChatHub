@@ -19,4 +19,6 @@ public enum EventType {
 
     USER_BLOCKED,
     USER_UNBLOCKED,
+
+    TEST
 }
