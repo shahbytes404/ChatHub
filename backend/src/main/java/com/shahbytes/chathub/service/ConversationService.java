@@ -1,6 +1,5 @@
 package com.shahbytes.chathub.service;
 
-import com.shahbytes.chathub.api.dto.event.RealtimeEvent;
 import com.shahbytes.chathub.api.dto.request.AddMemberRequest;
 import com.shahbytes.chathub.api.dto.request.CreateConversationRequest;
 import com.shahbytes.chathub.api.dto.request.UpdateConversationRequest;
@@ -10,19 +9,20 @@ import com.shahbytes.chathub.api.dto.response.MemberResponse;
 import com.shahbytes.chathub.domain.Conversation;
 import com.shahbytes.chathub.domain.ConversationMember;
 import com.shahbytes.chathub.domain.Message;
-import com.shahbytes.chathub.domain.OutboxEvent;
 import com.shahbytes.chathub.domain.type.ConversationType;
+import com.shahbytes.chathub.domain.type.EventType;
 import com.shahbytes.chathub.domain.type.MemberRole;
+import com.shahbytes.chathub.domain.type.ResourceType;
 import com.shahbytes.chathub.exception.ConflictException;
 import com.shahbytes.chathub.exception.NotFoundException;
-import com.shahbytes.chathub.repository.*;
+import com.shahbytes.chathub.repository.ConversationMemberRepository;
+import com.shahbytes.chathub.repository.ConversationRepository;
+import com.shahbytes.chathub.repository.MessageRepository;
+import com.shahbytes.chathub.repository.UserAccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
 
-import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -37,11 +37,9 @@ public class ConversationService {
 
     private final MembershipService membershipService;
     private final MessageService messageService;
-
-    private final ObjectMapper objectMapper;
-
-    private final OutboxRepository outboxRepository;
     private final AuditService auditService;
+
+    private final ConversationEventService conversationEventService;
 
     @Transactional
     public ConversationResponse create(UUID creatorId, CreateConversationRequest request) {
@@ -92,6 +90,8 @@ public class ConversationService {
                                 : MemberRole.MEMBER
                 )).toList();
 
+        var recipientIds = members.stream().map(ConversationMember::getUserId).toList();
+
         convMemberRepository.saveAll(members);
 
         if (request.type() == ConversationType.GROUP) {
@@ -101,7 +101,6 @@ public class ConversationService {
                     .orElseThrow(() -> new NotFoundException("Creator not found"))
                     .getDisplayName();
 
-            var recipientIds = members.stream().map(ConversationMember::getUserId).toList();
 
             messageService.sendSystemMessage(
                     creatorId,
@@ -111,7 +110,28 @@ public class ConversationService {
             );
         }
 
-        return toResponse(conversation);
+        auditService.record(
+                creatorId,
+                EventType.CONVERSATION_CREATED.name(),
+                ResourceType.CONVERSATION.name(),
+                conversation.getId().toString(),
+                Map.of(
+                        "type", request.type().name(),
+                        "memberCount", members.size()
+                )
+        );
+
+        var response = toResponse(conversation);
+
+        conversationEventService.conversationChangedForMembers(
+                recipientIds,
+                conversation.getId(),
+                creatorId,
+                EventType.CONVERSATION_CREATED,
+                response
+        );
+
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -176,12 +196,6 @@ public class ConversationService {
 
     }
 
-    private Optional<Conversation> findDuplicateDirectConversation(
-            LinkedHashSet<UUID> memberIds
-    ) {
-        return conversationRepository.findExistingDirectConversation(ConversationType.DIRECT, memberIds);
-    }
-
     @Transactional
     public ConversationResponse addMember(
             UUID actorId,
@@ -207,7 +221,16 @@ public class ConversationService {
             throw new ConflictException("User is already a member");
         }
 
+        long latestSequence = messageRepository
+                .findTopByConversationIdOrderBySequenceNumberDesc(
+                        conversationId
+                )
+                .map(Message::getSequenceNumber)
+                .orElse(0L);
+
         var newMember = new ConversationMember(conversationId, request.userId(), request.role());
+
+        newMember.softHideAt(latestSequence);
 
         convMemberRepository.save(newMember);
 
@@ -225,7 +248,28 @@ public class ConversationService {
                 recipientIds
         );
 
-        return toResponse(conversation);
+        auditService.record(
+                actorId,
+                EventType.CONVERSATION_MEMBER_ADDED.name(),
+                ResourceType.CONVERSATION.name(),
+                conversationId.toString(),
+                Map.of(
+                        "userId", request.userId(),
+                        "role", request.role().name()
+                )
+        );
+
+        var response = toResponse(conversation);
+
+        conversationEventService.conversationChangedForMembers(
+                recipientIds,
+                conversationId,
+                actorId,
+                EventType.CONVERSATION_UPDATED,
+                response
+        );
+
+        return response;
     }
 
     @Transactional
@@ -279,7 +323,33 @@ public class ConversationService {
                 recipientIds
         );
 
-        return toResponse(conversation);
+        auditService.record(
+                actorId,
+                EventType.CONVERSATION_MEMBER_REMOVED.name(),
+                ResourceType.CONVERSATION.name(),
+                conversationId.toString(),
+                Map.of(
+                        "userId", memberUserId
+                )
+        );
+
+        conversationEventService.memberRemoved(
+                memberUserId,
+                conversationId,
+                actorId
+        );
+
+        var response = toResponse(conversation);
+
+        conversationEventService.conversationChangedForMembers(
+                recipientIds,
+                conversationId,
+                actorId,
+                EventType.CONVERSATION_UPDATED,
+                response
+        );
+
+        return response;
     }
 
     @Transactional
@@ -301,6 +371,18 @@ public class ConversationService {
 
         conversation.rename(request.title());
 
+        auditService.record(
+                actorId,
+                EventType.CONVERSATION_UPDATED.name(),
+                ResourceType.CONVERSATION.name(),
+                conversationId.toString(),
+                Map.of(
+                        "title",
+                        request.title() == null ? ""
+                                : request.title()
+                )
+        );
+
         var actor = userAccountRepository.findById(actorId)
                 .orElseThrow(() -> new NotFoundException("Actor not found"));
 
@@ -316,7 +398,17 @@ public class ConversationService {
                 recipientIds
         );
 
-        return toResponse(conversation);
+        var response = toResponse(conversation);
+
+        conversationEventService.conversationChangedForMembers(
+                recipientIds,
+                conversationId,
+                actorId,
+                EventType.CONVERSATION_UPDATED,
+                response
+        );
+
+        return response;
     }
 
     @Transactional
@@ -344,13 +436,11 @@ public class ConversationService {
             var members = convMemberRepository.findAllByConversationId(conversationId);
 
             for (var member : members) {
-                outboxRepository.save(
-                        createConversationRemovedEvent(
-                                member.getUserId(),
-                                conversationId,
-                                actorId,
-                                true
-                        )
+                conversationEventService.conversationRemoved(
+                        member.getUserId(),
+                        conversationId,
+                        actorId,
+                        true
                 );
             }
 
@@ -358,8 +448,8 @@ public class ConversationService {
 
             auditService.record(
                     actorId,
-                    "CONVERSATION_DELETED",
-                    "CONVERSATION",
+                    EventType.CONVERSATION_DELETED.name(),
+                    ResourceType.CONVERSATION.name(),
                     conversationId.toString(),
                     Map.of(
                             "scope", "GROUP_HARD_DELETE"
@@ -379,59 +469,26 @@ public class ConversationService {
 
         convMemberRepository.save(actor);
 
-        outboxRepository.save(
-                createConversationRemovedEvent(
-                        actorId,
-                        conversationId,
-                        actorId,
-                        false
-                )
+        conversationEventService.conversationRemoved(
+                actorId,
+                conversationId,
+                actorId,
+                false
         );
 
         auditService.record(
                 actorId,
-                "CONVERSATION_DELETED_FOR_USER",
-                "CONVERSATION",
+                EventType.CONVERSATION_DELETED_FOR_USER.name(),
+                ResourceType.CONVERSATION.name(),
                 conversationId.toString(),
                 Map.of()
         );
     }
 
-    private OutboxEvent createConversationRemovedEvent(
-            UUID targetUserId,
-            UUID conversationId,
-            UUID actorId,
-            boolean permanent
+    private Optional<Conversation> findDuplicateDirectConversation(
+            LinkedHashSet<UUID> memberIds
     ) {
-        var event = new RealtimeEvent(
-                "CONVERSATION_REMOVED",
-                targetUserId,
-                conversationId,
-                actorId,
-                null,
-                Map.of(
-                        "conversationId", conversationId,
-                        "permanent", permanent
-                ),
-                Instant.now()
-        );
-
-        return new OutboxEvent(
-                "CONVERSATION",
-                conversationId,
-                "CONVERSATION_REMOVED",
-                toJson(event)
-        );
-    }
-
-    private String toJson(RealtimeEvent event) {
-        try {
-            return objectMapper.writeValueAsString(event);
-        } catch (JacksonException exception) {
-            throw new IllegalStateException(
-                    "Could not serialize conversation event", exception
-            );
-        }
+        return conversationRepository.findExistingDirectConversation(ConversationType.DIRECT, memberIds);
     }
 
     private ConversationResponse toResponse(Conversation conversation) {
