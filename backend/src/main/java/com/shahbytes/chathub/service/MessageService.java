@@ -1,13 +1,13 @@
 package com.shahbytes.chathub.service;
 
 import com.shahbytes.chathub.api.dto.event.MessageCreatedEvent;
+import com.shahbytes.chathub.api.dto.event.RealtimeEvent;
 import com.shahbytes.chathub.api.dto.response.MessageResponse;
 import com.shahbytes.chathub.api.dto.request.SendMessageRequest;
 import com.shahbytes.chathub.domain.Message;
 import com.shahbytes.chathub.domain.MessageReceipt;
 import com.shahbytes.chathub.domain.OutboxEvent;
-import com.shahbytes.chathub.domain.type.MessageType;
-import com.shahbytes.chathub.domain.type.ReceiptState;
+import com.shahbytes.chathub.domain.type.*;
 import com.shahbytes.chathub.exception.ConflictException;
 import com.shahbytes.chathub.exception.ForbiddenException;
 import com.shahbytes.chathub.exception.NotFoundException;
@@ -98,6 +98,18 @@ public class MessageService {
                         recipientIds
                 );
 
+        var conversation = conversationRepository.findByIdForUpdate(conversationId)
+                .orElseThrow(() ->
+                        new NotFoundException("Conversation not found"));
+
+        if (conversation.getType() == ConversationType.DIRECT
+                && (
+                !recipientsWhoBlockedSender.isEmpty()
+                        || !senderBlockedRecipientIds.isEmpty()
+        )) {
+            throw new ConflictException("You cannot send messages to this user");
+        }
+
         var blockedRecipientIds = new HashSet<>(senderBlockedRecipientIds);
         blockedRecipientIds.addAll(recipientsWhoBlockedSender);
 
@@ -105,9 +117,6 @@ public class MessageService {
                 .filter(recipientId -> !blockedRecipientIds.contains(recipientId))
                 .toList();
 
-        var conversation = conversationRepository.findByIdForUpdate(conversationId)
-                .orElseThrow(() ->
-                        new NotFoundException("Conversation not found"));
 
         long sequenceNumber = conversation.allocateNextMessageSequence();
 
@@ -138,9 +147,9 @@ public class MessageService {
 
         outboxRepository.save(
                 new OutboxEvent(
-                        "MESSAGE",
+                        ResourceType.MESSAGE.name(),
                         message.getId(),
-                        "MESSAGE_CREATED",
+                        EventType.MESSAGE_CREATED.name(),
                         toJson(
                                 new MessageCreatedEvent(
                                         response,
@@ -152,8 +161,8 @@ public class MessageService {
 
         auditService.record(
                 senderId,
-                "MESSAGE_SENT",
-                "MESSAGE",
+                EventType.MESSAGE_SENT.name(),
+                ResourceType.MESSAGE.name(),
                 message.getId().toString(),
                 Map.of(
                         "conversationId", conversationId,
@@ -187,7 +196,35 @@ public class MessageService {
         );
         messageRepository.save(message);
 
-        return toResponse(message, null);
+        var response = toResponse(message, null);
+
+        outboxRepository.save(
+                new OutboxEvent(
+                        ResourceType.MESSAGE.name(),
+                        message.getId(),
+                        EventType.MESSAGE_CREATED.name(),
+                        toJson(
+                                new MessageCreatedEvent(
+                                        response,
+                                        recipientIds
+                                )
+                        )
+                )
+        );
+
+        auditService.record(
+                actorId,
+                EventType.MESSAGE_SENT.name(),
+                ResourceType.MESSAGE.name(),
+                message.getId().toString(),
+                Map.of(
+                        "conversationId", conversationId,
+                        "sequence", sequenceNumber,
+                        "system", true
+                )
+        );
+
+        return response;
     }
 
     public static MessageResponse toResponse(Message message, ReceiptState state) {
