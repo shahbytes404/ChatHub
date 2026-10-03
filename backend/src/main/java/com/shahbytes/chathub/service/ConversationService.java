@@ -167,13 +167,55 @@ public class ConversationService {
                         )
                 );
 
+        var latestSequences = messageRepository
+                .findLatestSequences(conversationsIds)
+                .stream()
+                .collect(
+                        Collectors.toMap(
+                                row -> (UUID) row[0],
+                                row -> ((Number) row[1]).longValue()
+                        )
+                );
+
         return conversations.stream()
-                .map(conversation -> {
+                .filter(conversation -> {
                     var conversationMembers =
                             membersByConversation.getOrDefault(
                                     conversation.getId(),
                                     List.of()
                             );
+
+                    var membership = conversationMembers.stream()
+                            .filter(member -> member.userId().equals(userId))
+                            .findFirst()
+                            .orElse(null);
+
+                    if (membership == null) {
+                        return false;
+                    }
+
+
+                    long latestSequence = latestSequences.getOrDefault(
+                            conversation.getId(),
+                            0L
+                    );
+
+                    boolean hidden =
+                            membership.hiddenAfterSequence() != null
+                                    && latestSequence <= membership.hiddenAfterSequence();
+
+                    if (!hidden) {
+                        return true;
+                    }
+
+                    return conversation.getType() == ConversationType.GROUP;
+
+                })
+                .map(conversation -> {
+                    var conversationMembers = membersByConversation.getOrDefault(
+                            conversation.getId(),
+                            List.of()
+                    );
 
                     var memberResponses =
                             conversationMembers.stream()

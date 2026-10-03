@@ -33,7 +33,8 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
 
     @Query("""
                 SELECT new com.shahbytes.chathub.api.dto.response.ConversationMemberResponse(
-                    cm.conversationId, cm.userId, u.displayName, cm.role, cm.lastReadSequence
+                    cm.conversationId, cm.userId, u.displayName, cm.role, cm.lastReadSequence,
+                                cm.hiddenAfterSequence
                     )
                     FROM ConversationMember cm
                         JOIN UserAccount u

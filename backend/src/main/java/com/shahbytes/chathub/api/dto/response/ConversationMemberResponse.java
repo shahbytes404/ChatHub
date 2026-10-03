@@ -9,6 +9,7 @@ public record ConversationMemberResponse(
         UUID userId,
         String displayName,
         MemberRole role,
-        long lastReadSequence
+        long lastReadSequence,
+        Long hiddenAfterSequence
 ) {
 }

@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -100,4 +102,13 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
                                             order by m.createdAt desc
             """)
     Slice<Message> searchVisibleMessages(UUID userId, String query, Pageable pageable);
+
+    @Query("""
+            select m.conversationId, max(m.sequenceNumber) from Message m
+                    where m.conversationId in :conversationIds
+                            group by m.conversationId
+            """)
+    List<Object[]> findLatestSequences(
+            @Param("conversationIds") Collection<UUID> conversationIds
+    );
 }
