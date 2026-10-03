@@ -3,6 +3,7 @@ package com.shahbytes.chathub.messaging;
 import com.shahbytes.chathub.api.dto.event.MessageCreatedEvent;
 import com.shahbytes.chathub.api.dto.event.RealtimeEvent;
 import com.shahbytes.chathub.domain.ProcessedEvent;
+import com.shahbytes.chathub.domain.type.EventType;
 import com.shahbytes.chathub.repository.ProcessedEventRepository;
 import com.shahbytes.chathub.service.NotificationService;
 import com.shahbytes.chathub.service.PresenceService;
@@ -156,14 +157,15 @@ public class MessageDeliveryWorker {
 
         try {
             var eventId = UUID.fromString(eventIdRaw);
+            var type = EventType.valueOf(eventType);
 
             if (processedEventRepository.existsById(eventId)) {
                 acknowledge(record);
                 return;
             }
 
-            switch (eventType) {
-                case "MESSAGE_CREATED" -> {
+            switch (type) {
+                case MESSAGE_CREATED -> {
                     var event = objectMapper.readValue(
                             payloadJson,
                             MessageCreatedEvent.class
@@ -172,7 +174,7 @@ public class MessageDeliveryWorker {
                     for (var recipientId : event.recipientIds()) {
                         if (presenceService.isOnline(recipientId)) {
                             var realtimeEvent = new RealtimeEvent(
-                                    "MESSAGE_CREATED",
+                                    EventType.MESSAGE_CREATED,
                                     recipientId,
                                     event.message().conversationId(),
                                     event.message().senderId(),
@@ -189,7 +191,9 @@ public class MessageDeliveryWorker {
                     }
                 }
 
-                case "CONVERSATION_REMOVED" -> {
+                case CONVERSATION_CREATED,
+                     CONVERSATION_UPDATED,
+                     CONVERSATION_REMOVED -> {
                     var event = objectMapper.readValue(
                             payloadJson,
                             RealtimeEvent.class
