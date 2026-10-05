@@ -204,6 +204,15 @@ public class MessageService {
         );
         messageRepository.save(message);
 
+        mrRepository.saveAll(
+                recipientIds.stream()
+                        .filter(recipientId -> !recipientId.equals(actorId))
+                        .map(recipientId -> new MessageReceipt(
+                                message.getId(),
+                                recipientId
+                        )).toList()
+        );
+
         var response = toResponse(message, null);
 
         outboxRepository.save(
