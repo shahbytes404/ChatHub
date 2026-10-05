@@ -159,11 +159,6 @@ public class MessageDeliveryWorker {
             var eventId = UUID.fromString(eventIdRaw);
             var type = EventType.valueOf(eventType);
 
-            if (processedEventRepository.existsById(eventId)) {
-                acknowledge(record);
-                return;
-            }
-
             switch (type) {
                 case MESSAGE_CREATED -> {
                     var event = objectMapper.readValue(
@@ -193,7 +188,9 @@ public class MessageDeliveryWorker {
 
                 case CONVERSATION_CREATED,
                      CONVERSATION_UPDATED,
-                     CONVERSATION_REMOVED -> {
+                     CONVERSATION_REMOVED,
+                     MESSAGE_DELIVERED,
+                     MESSAGE_READ -> {
                     var event = objectMapper.readValue(
                             payloadJson,
                             RealtimeEvent.class
@@ -208,12 +205,7 @@ public class MessageDeliveryWorker {
             }
 
 
-            processedEventRepository.save(
-                    new ProcessedEvent(
-                            eventId,
-                            Instant.now()
-                    )
-            );
+            processedEventRepository.markProcessed(eventId, Instant.now());
 
             acknowledge(record);
         } catch (Exception e) {

@@ -156,4 +156,16 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
             @Param("userId") UUID userId,
             @Param("conversationIds") Collection<UUID> conversationIds
     );
+
+    @Query("""
+            select m from Message m
+                    join MessageReceipt r
+                            on r.messageId = m.id
+                                    where m.conversationId = :conversationId
+                                            and r.userId = :userId
+            """)
+    List<Message> findMessageWithReceiptForUser(
+            @Param("conversationId") UUID conversationId,
+            @Param("userId") UUID userId
+    );
 }

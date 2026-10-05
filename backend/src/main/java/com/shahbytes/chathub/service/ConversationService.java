@@ -40,6 +40,7 @@ public class ConversationService {
     private final AuditService auditService;
 
     private final ConversationEventService conversationEventService;
+    private final ReceiptService receiptService;
 
     @Transactional
     public ConversationResponse create(UUID creatorId, CreateConversationRequest request) {
@@ -369,6 +370,11 @@ public class ConversationService {
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
         convMemberRepository.delete(targetMember);
+
+        receiptService.recalculateForRemovedMember(
+                conversationId,
+                memberUserId
+        );
 
         var recipientIds = convMemberRepository.findAllByConversationId(conversationId).stream()
                 .map(ConversationMember::getUserId).toList();

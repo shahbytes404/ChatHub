@@ -23,6 +23,8 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.UUID;
 
+import static com.shahbytes.chathub.domain.type.ReceiptState.DELIVERED;
+
 @Service
 @RequiredArgsConstructor
 public class ReceiptService {
@@ -121,6 +123,78 @@ public class ReceiptService {
         return response;
     }
 
+    @Transactional
+    public void recalculateForRemovedMember(
+            UUID conversationId,
+            UUID removedUserId
+    ) {
+        var messages = messageRepository.findMessageWithReceiptForUser(
+                conversationId, removedUserId
+        );
+
+        if (messages.isEmpty()) {
+            return;
+        }
+
+        var currentMemberIds = memberRepository
+                .findAllByConversationId(conversationId)
+                .stream()
+                .map(ConversationMember::getUserId)
+                .toList();
+
+        for (var message : messages) {
+            var receipts = receiptRepository.findAllByMessageIdForUpdate(message.getId());
+
+            var receiptState = mrStateService.resolveForSender(
+                    message,
+                    message.getSenderId(),
+                    receipts,
+                    currentMemberIds
+            ).orElse(null);
+
+            if (receiptState == null) {
+                continue;
+            }
+
+            var eventType =
+                    switch (receiptState) {
+                        case DELIVERED -> EventType.MESSAGE_DELIVERED;
+                        case READ -> EventType.MESSAGE_READ;
+                        case SENT -> null;
+                    };
+
+            if (eventType == null) {
+                continue;
+            }
+
+            var response = new ReceiptResponse(
+                    message.getId(),
+                    message.getSenderId(),
+                    null,
+                    null,
+                    receiptState
+            );
+
+            outboxRepository.save(
+                    new OutboxEvent(
+                            ResourceType.MESSAGE.name(),
+                            message.getId(),
+                            eventType.name(),
+                            toJson(
+                                    new RealtimeEvent(
+                                            eventType,
+                                            message.getSenderId(),
+                                            conversationId,
+                                            removedUserId,
+                                            message.getId(),
+                                            response,
+                                            Instant.now()
+                                    )
+                            )
+                    )
+            );
+        }
+    }
 
     private String toJson(RealtimeEvent event) {
         try {
