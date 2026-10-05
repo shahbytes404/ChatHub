@@ -2,8 +2,10 @@ package com.shahbytes.chathub.service;
 
 import com.shahbytes.chathub.api.dto.response.MessagePageResponse;
 import com.shahbytes.chathub.api.dto.response.MessageResponse;
+import com.shahbytes.chathub.domain.ConversationMember;
 import com.shahbytes.chathub.domain.Message;
 import com.shahbytes.chathub.domain.MessageReceipt;
+import com.shahbytes.chathub.repository.ConversationMemberRepository;
 import com.shahbytes.chathub.repository.MessageReceiptRepository;
 import com.shahbytes.chathub.repository.MessageRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ public class MessageQueryService {
     private final MessageRepository messageRepository;
     private final MessageReceiptRepository messageReceiptRepository;
     private final MessageReceiptStateService messageReceiptStateService;
+    private final ConversationMemberRepository conversationMemberRepository;
 
     @Transactional(readOnly = true)
     public MessagePageResponse getMessages(
@@ -39,6 +42,12 @@ public class MessageQueryService {
                 Math.max(size, 1),
                 100
         );
+
+        var currentMemberIds = conversationMemberRepository
+                .findAllByConversationId(conversationId)
+                .stream()
+                .map(ConversationMember::getUserId)
+                .toList();
 
         long hiddenAfterSequence =
                 member.getHiddenAfterSequence() == null
@@ -67,7 +76,8 @@ public class MessageQueryService {
 
             var messages = toResponses(
                     userId,
-                    slice.getContent()
+                    slice.getContent(),
+                    currentMemberIds
             );
 
             Long nextAfterSequence = messages.isEmpty()
@@ -90,7 +100,7 @@ public class MessageQueryService {
 
         var messages = new ArrayList<>(toResponses(
                 userId,
-                slice.getContent()));
+                slice.getContent(), currentMemberIds));
 
         Collections.reverse(messages);
 
@@ -108,7 +118,8 @@ public class MessageQueryService {
 
     private List<MessageResponse> toResponses(
             UUID userId,
-            List<Message> messages
+            List<Message> messages,
+            Collection<UUID> currentMemberIds
     ) {
         if (messages.isEmpty()) {
             return List.of();
@@ -134,7 +145,8 @@ public class MessageQueryService {
                                 receiptsByMessageId.getOrDefault(
                                         message.getId(),
                                         List.of()
-                                )
+                                ),
+                                currentMemberIds
                         ).orElse(null)
                 )).toList();
     }

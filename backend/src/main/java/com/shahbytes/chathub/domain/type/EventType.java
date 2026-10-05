@@ -3,6 +3,8 @@ package com.shahbytes.chathub.domain.type;
 public enum EventType {
     MESSAGE_CREATED,
     MESSAGE_SENT,
+    MESSAGE_DELIVERED,
+    MESSAGE_READ,
 
     CONVERSATION_CREATED,
     CONVERSATION_UPDATED,

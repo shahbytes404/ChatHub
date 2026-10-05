@@ -4,6 +4,7 @@ import com.shahbytes.chathub.api.dto.event.MessageCreatedEvent;
 import com.shahbytes.chathub.api.dto.event.RealtimeEvent;
 import com.shahbytes.chathub.api.dto.response.MessageResponse;
 import com.shahbytes.chathub.api.dto.request.SendMessageRequest;
+import com.shahbytes.chathub.domain.ConversationMember;
 import com.shahbytes.chathub.domain.Message;
 import com.shahbytes.chathub.domain.MessageReceipt;
 import com.shahbytes.chathub.domain.OutboxEvent;
@@ -68,11 +69,18 @@ public class MessageService {
                 );
             }
 
+            var currentMemberIds = cmRepository
+                    .findAllByConversationId(conversationId)
+                    .stream()
+                    .map(ConversationMember::getUserId)
+                    .toList();
+
             ReceiptState existingState =
                     receiptStateService.resolveForSender(
                             message,
                             senderId,
-                            mrRepository.findAllByMessageId(message.getId())
+                            mrRepository.findAllByMessageId(message.getId()),
+                            currentMemberIds
                     ).orElseThrow(
                             () -> new ForbiddenException("You are not allowed to view the state of message"));
 
