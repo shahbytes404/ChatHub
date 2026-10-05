@@ -158,6 +158,18 @@ public class ConversationService {
         var conversationsIds = conversations.stream()
                 .map(Conversation::getId).toList();
 
+        var latestMessagePreviews =
+                messageRepository.findLatestMessagePreviews(
+                                userId,
+                                conversationsIds
+                        ).stream()
+                        .collect(
+                                Collectors.toMap(
+                                        row -> (UUID) row[0],
+                                        row -> (String) row[1]
+                                )
+                        );
+
         var members = convMemberRepository.findConversationMemberResponses(conversationsIds);
 
         var membersByConversation = members.stream()
@@ -208,7 +220,9 @@ public class ConversationService {
                         return true;
                     }
 
-                    return conversation.getType() == ConversationType.GROUP;
+                    return conversation.getType() == ConversationType.GROUP
+                            || conversation.getCreatedBy().equals(userId)
+                            || latestSequence > 0;
 
                 })
                 .map(conversation -> {
@@ -232,7 +246,8 @@ public class ConversationService {
                             conversation.getTitle(),
                             conversation.getCreatedBy(),
                             conversation.getCreatedAt(),
-                            memberResponses
+                            memberResponses,
+                            latestMessagePreviews.get(conversation.getId())
                     );
                 }).toList();
 
@@ -536,13 +551,19 @@ public class ConversationService {
     private ConversationResponse toResponse(Conversation conversation) {
         var memberResponses = convMemberRepository.findMemberResponses(conversation.getId());
 
+        var latestMessagePreview = messageRepository
+                .findTopByConversationIdOrderBySequenceNumberDesc(conversation.getId())
+                .map(Message::getContent)
+                .orElse(null);
+
         return new ConversationResponse(
                 conversation.getId(),
                 conversation.getType(),
                 conversation.getTitle(),
                 conversation.getCreatedBy(),
                 conversation.getCreatedAt(),
-                memberResponses
+                memberResponses,
+                latestMessagePreview
         );
     }
 }

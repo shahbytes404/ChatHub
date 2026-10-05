@@ -12,6 +12,7 @@ public record ConversationResponse(
         String title,
         UUID createdBy,
         Instant createdAt,
-        List<MemberResponse> members
+        List<MemberResponse> members,
+        String latestMessagePreview
 ) {
 }
