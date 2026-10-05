@@ -1,11 +1,14 @@
 package com.shahbytes.chathub.service;
 
-import com.shahbytes.chathub.api.dto.MessageResponse;
-import com.shahbytes.chathub.api.dto.SendMessageRequest;
+import com.shahbytes.chathub.api.dto.event.MessageCreatedEvent;
+import com.shahbytes.chathub.api.dto.event.RealtimeEvent;
+import com.shahbytes.chathub.api.dto.response.MessageResponse;
+import com.shahbytes.chathub.api.dto.request.SendMessageRequest;
+import com.shahbytes.chathub.domain.ConversationMember;
 import com.shahbytes.chathub.domain.Message;
 import com.shahbytes.chathub.domain.MessageReceipt;
-import com.shahbytes.chathub.domain.type.MessageType;
-import com.shahbytes.chathub.domain.type.ReceiptState;
+import com.shahbytes.chathub.domain.OutboxEvent;
+import com.shahbytes.chathub.domain.type.*;
 import com.shahbytes.chathub.exception.ConflictException;
 import com.shahbytes.chathub.exception.ForbiddenException;
 import com.shahbytes.chathub.exception.NotFoundException;
@@ -13,8 +16,12 @@ import com.shahbytes.chathub.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -28,6 +35,13 @@ public class MessageService {
     private final MessageReceiptRepository mrRepository;
     private final MessageReceiptStateService receiptStateService;
     private final UserBlockRepository userBlockRepository;
+
+    private final OutboxRepository outboxRepository;
+    private final AuditService auditService;
+
+    private final RateLimitService rateLimitService;
+
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public MessageResponse send(
@@ -55,16 +69,25 @@ public class MessageService {
                 );
             }
 
+            var currentMemberIds = cmRepository
+                    .findAllByConversationId(conversationId)
+                    .stream()
+                    .map(ConversationMember::getUserId)
+                    .toList();
+
             ReceiptState existingState =
                     receiptStateService.resolveForSender(
                             message,
                             senderId,
-                            mrRepository.findAllByMessageId(message.getId())
+                            mrRepository.findAllByMessageId(message.getId()),
+                            currentMemberIds
                     ).orElseThrow(
                             () -> new ForbiddenException("You are not allowed to view the state of message"));
 
             return toResponse(message, existingState);
         }
+
+        rateLimitService.checkMessageSend(senderId);
 
         var recipientIds = cmRepository.findRecipientIds(conversationId, senderId);
 
@@ -83,6 +106,18 @@ public class MessageService {
                         recipientIds
                 );
 
+        var conversation = conversationRepository.findByIdForUpdate(conversationId)
+                .orElseThrow(() ->
+                        new NotFoundException("Conversation not found"));
+
+        if (conversation.getType() == ConversationType.DIRECT
+                && (
+                !recipientsWhoBlockedSender.isEmpty()
+                        || !senderBlockedRecipientIds.isEmpty()
+        )) {
+            throw new ConflictException("You cannot send messages to this user");
+        }
+
         var blockedRecipientIds = new HashSet<>(senderBlockedRecipientIds);
         blockedRecipientIds.addAll(recipientsWhoBlockedSender);
 
@@ -90,9 +125,6 @@ public class MessageService {
                 .filter(recipientId -> !blockedRecipientIds.contains(recipientId))
                 .toList();
 
-        var conversation = conversationRepository.findByIdForUpdate(conversationId)
-                .orElseThrow(() ->
-                        new NotFoundException("Conversation not found"));
 
         long sequenceNumber = conversation.allocateNextMessageSequence();
 
@@ -119,7 +151,97 @@ public class MessageService {
             );
         }
 
-        return toResponse(message, ReceiptState.SENT);
+        var response = toResponse(message, ReceiptState.SENT);
+
+        outboxRepository.save(
+                new OutboxEvent(
+                        ResourceType.MESSAGE.name(),
+                        message.getId(),
+                        EventType.MESSAGE_CREATED.name(),
+                        toJson(
+                                new MessageCreatedEvent(
+                                        response,
+                                        deliverableRecipientIds
+                                )
+                        )
+                )
+        );
+
+        auditService.record(
+                senderId,
+                EventType.MESSAGE_SENT.name(),
+                ResourceType.MESSAGE.name(),
+                message.getId().toString(),
+                Map.of(
+                        "conversationId", conversationId,
+                        "sequence", sequenceNumber
+                )
+        );
+
+        return response;
+    }
+
+    @Transactional
+    public MessageResponse sendSystemMessage(
+            UUID actorId,
+            UUID conversationId,
+            String content,
+            List<UUID> recipientIds
+    ) {
+        var conversation = conversationRepository.findByIdForUpdate(conversationId)
+                .orElseThrow(() ->
+                        new NotFoundException("Conversation not found"));
+
+        long sequenceNumber = conversation.allocateNextMessageSequence();
+
+        var message = new Message(
+                conversationId,
+                actorId,
+                "system-" + UUID.randomUUID(),
+                sequenceNumber,
+                MessageType.SYSTEM,
+                content
+        );
+        messageRepository.save(message);
+
+        mrRepository.saveAll(
+                recipientIds.stream()
+                        .filter(recipientId -> !recipientId.equals(actorId))
+                        .map(recipientId -> new MessageReceipt(
+                                message.getId(),
+                                recipientId
+                        )).toList()
+        );
+
+        var response = toResponse(message, null);
+
+        outboxRepository.save(
+                new OutboxEvent(
+                        ResourceType.MESSAGE.name(),
+                        message.getId(),
+                        EventType.MESSAGE_CREATED.name(),
+                        toJson(
+                                new MessageCreatedEvent(
+                                        response,
+                                        recipientIds
+                                )
+                        )
+                )
+        );
+
+        auditService.record(
+                actorId,
+                EventType.MESSAGE_SENT.name(),
+                ResourceType.MESSAGE.name(),
+                message.getId().toString(),
+                Map.of(
+                        "conversationId", conversationId,
+                        "sequence", sequenceNumber,
+                        "system", true
+                )
+        );
+
+        return response;
     }
 
     public static MessageResponse toResponse(Message message, ReceiptState state) {
@@ -134,5 +256,13 @@ public class MessageService {
                 message.getCreatedAt(),
                 state
         );
+    }
+
+    private String toJson(MessageCreatedEvent event) {
+        try {
+            return objectMapper.writeValueAsString(event);
+        } catch (JacksonException exception) {
+            throw new IllegalStateException("Could not serialize message event", exception);
+        }
     }
 }

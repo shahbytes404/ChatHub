@@ -1,23 +1,29 @@
 package com.shahbytes.chathub.service;
 
-import com.shahbytes.chathub.api.dto.*;
+import com.shahbytes.chathub.api.dto.request.AddMemberRequest;
+import com.shahbytes.chathub.api.dto.request.CreateConversationRequest;
+import com.shahbytes.chathub.api.dto.request.UpdateConversationRequest;
+import com.shahbytes.chathub.api.dto.response.ConversationMemberResponse;
+import com.shahbytes.chathub.api.dto.response.ConversationResponse;
+import com.shahbytes.chathub.api.dto.response.MemberResponse;
 import com.shahbytes.chathub.domain.Conversation;
 import com.shahbytes.chathub.domain.ConversationMember;
+import com.shahbytes.chathub.domain.Message;
 import com.shahbytes.chathub.domain.type.ConversationType;
+import com.shahbytes.chathub.domain.type.EventType;
 import com.shahbytes.chathub.domain.type.MemberRole;
+import com.shahbytes.chathub.domain.type.ResourceType;
 import com.shahbytes.chathub.exception.ConflictException;
 import com.shahbytes.chathub.exception.NotFoundException;
 import com.shahbytes.chathub.repository.ConversationMemberRepository;
 import com.shahbytes.chathub.repository.ConversationRepository;
+import com.shahbytes.chathub.repository.MessageRepository;
 import com.shahbytes.chathub.repository.UserAccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,8 +33,14 @@ public class ConversationService {
     private final UserAccountRepository userAccountRepository;
     private final ConversationRepository conversationRepository;
     private final ConversationMemberRepository convMemberRepository;
+    private final MessageRepository messageRepository;
 
     private final MembershipService membershipService;
+    private final MessageService messageService;
+    private final AuditService auditService;
+
+    private final ConversationEventService conversationEventService;
+    private final ReceiptService receiptService;
 
     @Transactional
     public ConversationResponse create(UUID creatorId, CreateConversationRequest request) {
@@ -79,9 +91,48 @@ public class ConversationService {
                                 : MemberRole.MEMBER
                 )).toList();
 
+        var recipientIds = members.stream().map(ConversationMember::getUserId).toList();
+
         convMemberRepository.saveAll(members);
 
-        return toResponse(conversation);
+        if (request.type() == ConversationType.GROUP) {
+            var creatorName = users.stream()
+                    .filter(user -> user.getId().equals(creatorId))
+                    .findFirst()
+                    .orElseThrow(() -> new NotFoundException("Creator not found"))
+                    .getDisplayName();
+
+
+            messageService.sendSystemMessage(
+                    creatorId,
+                    conversation.getId(),
+                    creatorName + " started the conversation",
+                    recipientIds
+            );
+        }
+
+        auditService.record(
+                creatorId,
+                EventType.CONVERSATION_CREATED.name(),
+                ResourceType.CONVERSATION.name(),
+                conversation.getId().toString(),
+                Map.of(
+                        "type", request.type().name(),
+                        "memberCount", members.size()
+                )
+        );
+
+        var response = toResponse(conversation);
+
+        conversationEventService.conversationChangedForMembers(
+                recipientIds,
+                conversation.getId(),
+                creatorId,
+                EventType.CONVERSATION_CREATED,
+                response
+        );
+
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -108,6 +159,18 @@ public class ConversationService {
         var conversationsIds = conversations.stream()
                 .map(Conversation::getId).toList();
 
+        var latestMessagePreviews =
+                messageRepository.findLatestMessagePreviews(
+                                userId,
+                                conversationsIds
+                        ).stream()
+                        .collect(
+                                Collectors.toMap(
+                                        row -> (UUID) row[0],
+                                        row -> (String) row[1]
+                                )
+                        );
+
         var members = convMemberRepository.findConversationMemberResponses(conversationsIds);
 
         var membersByConversation = members.stream()
@@ -117,13 +180,57 @@ public class ConversationService {
                         )
                 );
 
+        var latestSequences = messageRepository
+                .findLatestSequences(conversationsIds)
+                .stream()
+                .collect(
+                        Collectors.toMap(
+                                row -> (UUID) row[0],
+                                row -> ((Number) row[1]).longValue()
+                        )
+                );
+
         return conversations.stream()
-                .map(conversation -> {
+                .filter(conversation -> {
                     var conversationMembers =
                             membersByConversation.getOrDefault(
                                     conversation.getId(),
                                     List.of()
                             );
+
+                    var membership = conversationMembers.stream()
+                            .filter(member -> member.userId().equals(userId))
+                            .findFirst()
+                            .orElse(null);
+
+                    if (membership == null) {
+                        return false;
+                    }
+
+
+                    long latestSequence = latestSequences.getOrDefault(
+                            conversation.getId(),
+                            0L
+                    );
+
+                    boolean hidden =
+                            membership.hiddenAfterSequence() != null
+                                    && latestSequence <= membership.hiddenAfterSequence();
+
+                    if (!hidden) {
+                        return true;
+                    }
+
+                    return conversation.getType() == ConversationType.GROUP
+                            || conversation.getCreatedBy().equals(userId)
+                            || latestSequence > 0;
+
+                })
+                .map(conversation -> {
+                    var conversationMembers = membersByConversation.getOrDefault(
+                            conversation.getId(),
+                            List.of()
+                    );
 
                     var memberResponses =
                             conversationMembers.stream()
@@ -140,16 +247,11 @@ public class ConversationService {
                             conversation.getTitle(),
                             conversation.getCreatedBy(),
                             conversation.getCreatedAt(),
-                            memberResponses
+                            memberResponses,
+                            latestMessagePreviews.get(conversation.getId())
                     );
                 }).toList();
 
-    }
-
-    private Optional<Conversation> findDuplicateDirectConversation(
-            LinkedHashSet<UUID> memberIds
-    ) {
-        return conversationRepository.findExistingDirectConversation(ConversationType.DIRECT, memberIds);
     }
 
     @Transactional
@@ -177,11 +279,55 @@ public class ConversationService {
             throw new ConflictException("User is already a member");
         }
 
+        long latestSequence = messageRepository
+                .findTopByConversationIdOrderBySequenceNumberDesc(
+                        conversationId
+                )
+                .map(Message::getSequenceNumber)
+                .orElse(0L);
+
         var newMember = new ConversationMember(conversationId, request.userId(), request.role());
+
+        newMember.softHideAt(latestSequence);
 
         convMemberRepository.save(newMember);
 
-        return toResponse(conversation);
+        var joinedUser = userAccountRepository.findById(request.userId())
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        var recipientIds = convMemberRepository.
+                findAllByConversationId(conversationId).stream()
+                .map(ConversationMember::getUserId).toList();
+
+        messageService.sendSystemMessage(
+                actorId,
+                conversationId,
+                joinedUser.getDisplayName() + " joined",
+                recipientIds
+        );
+
+        auditService.record(
+                actorId,
+                EventType.CONVERSATION_MEMBER_ADDED.name(),
+                ResourceType.CONVERSATION.name(),
+                conversationId.toString(),
+                Map.of(
+                        "userId", request.userId(),
+                        "role", request.role().name()
+                )
+        );
+
+        var response = toResponse(conversation);
+
+        conversationEventService.conversationChangedForMembers(
+                recipientIds,
+                conversationId,
+                actorId,
+                EventType.CONVERSATION_UPDATED,
+                response
+        );
+
+        return response;
     }
 
     @Transactional
@@ -217,9 +363,56 @@ public class ConversationService {
             );
         }
 
+        var actor = userAccountRepository.findById(actorId)
+                .orElseThrow(() -> new NotFoundException("Actor not found"));
+
+        var removedUser = userAccountRepository.findById(memberUserId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
         convMemberRepository.delete(targetMember);
 
-        return toResponse(conversation);
+        receiptService.recalculateForRemovedMember(
+                conversationId,
+                memberUserId
+        );
+
+        var recipientIds = convMemberRepository.findAllByConversationId(conversationId).stream()
+                .map(ConversationMember::getUserId).toList();
+
+        messageService.sendSystemMessage(
+                actorId,
+                conversationId,
+                actor.getDisplayName() + " removed " + removedUser.getDisplayName(),
+                recipientIds
+        );
+
+        auditService.record(
+                actorId,
+                EventType.CONVERSATION_MEMBER_REMOVED.name(),
+                ResourceType.CONVERSATION.name(),
+                conversationId.toString(),
+                Map.of(
+                        "userId", memberUserId
+                )
+        );
+
+        conversationEventService.memberRemoved(
+                memberUserId,
+                conversationId,
+                actorId
+        );
+
+        var response = toResponse(conversation);
+
+        conversationEventService.conversationChangedForMembers(
+                recipientIds,
+                conversationId,
+                actorId,
+                EventType.CONVERSATION_UPDATED,
+                response
+        );
+
+        return response;
     }
 
     @Transactional
@@ -241,11 +434,133 @@ public class ConversationService {
 
         conversation.rename(request.title());
 
-        return toResponse(conversation);
+        auditService.record(
+                actorId,
+                EventType.CONVERSATION_UPDATED.name(),
+                ResourceType.CONVERSATION.name(),
+                conversationId.toString(),
+                Map.of(
+                        "title",
+                        request.title() == null ? ""
+                                : request.title()
+                )
+        );
+
+        var actor = userAccountRepository.findById(actorId)
+                .orElseThrow(() -> new NotFoundException("Actor not found"));
+
+        var recipientIds = convMemberRepository.findAllByConversationId(conversationId).stream()
+                .map(ConversationMember::getUserId).toList();
+
+        messageService.sendSystemMessage(
+                actorId,
+                conversationId,
+                actor.getDisplayName()
+                        + " changed the group name to "
+                        + conversation.getTitle(),
+                recipientIds
+        );
+
+        var response = toResponse(conversation);
+
+        conversationEventService.conversationChangedForMembers(
+                recipientIds,
+                conversationId,
+                actorId,
+                EventType.CONVERSATION_UPDATED,
+                response
+        );
+
+        return response;
+    }
+
+    @Transactional
+    public void deleteForUser(
+            UUID actorId,
+            UUID conversationId,
+            boolean permanent
+    ) {
+        var actor = membershipService.requireMember(conversationId, actorId);
+
+        var conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new NotFoundException("Conversation not found"));
+
+        if (permanent
+                && (
+                conversation.getType() != ConversationType.GROUP
+                        || actor.getRole() != MemberRole.OWNER
+        )) {
+            throw new ConflictException(
+                    "Permanent delete is only available to the group owner"
+            );
+        }
+
+        if (permanent) {
+            var members = convMemberRepository.findAllByConversationId(conversationId);
+
+            for (var member : members) {
+                conversationEventService.conversationRemoved(
+                        member.getUserId(),
+                        conversationId,
+                        actorId,
+                        true
+                );
+            }
+
+            conversationRepository.deleteById(conversationId);
+
+            auditService.record(
+                    actorId,
+                    EventType.CONVERSATION_DELETED.name(),
+                    ResourceType.CONVERSATION.name(),
+                    conversationId.toString(),
+                    Map.of(
+                            "scope", "GROUP_HARD_DELETE"
+                    )
+            );
+
+            return;
+        }
+
+        var latestSequence =
+                messageRepository
+                        .findTopByConversationIdOrderBySequenceNumberDesc(conversationId)
+                        .map(Message::getSequenceNumber)
+                        .orElse(0L);
+
+        actor.softHideAt(latestSequence);
+
+        convMemberRepository.save(actor);
+
+        conversationEventService.conversationRemoved(
+                actorId,
+                conversationId,
+                actorId,
+                false
+        );
+
+        auditService.record(
+                actorId,
+                EventType.CONVERSATION_DELETED_FOR_USER.name(),
+                ResourceType.CONVERSATION.name(),
+                conversationId.toString(),
+                Map.of()
+        );
+    }
+
+    private Optional<Conversation> findDuplicateDirectConversation(
+            LinkedHashSet<UUID> memberIds
+    ) {
+        return conversationRepository.findExistingDirectConversation(ConversationType.DIRECT, memberIds);
     }
 
     private ConversationResponse toResponse(Conversation conversation) {
         var memberResponses = convMemberRepository.findMemberResponses(conversation.getId());
+
+        var latestMessagePreview = messageRepository
+                .findTopByConversationIdOrderBySequenceNumberDesc(conversation.getId())
+                .map(Message::getContent)
+                .orElse(null);
 
         return new ConversationResponse(
                 conversation.getId(),
@@ -253,7 +568,8 @@ public class ConversationService {
                 conversation.getTitle(),
                 conversation.getCreatedBy(),
                 conversation.getCreatedAt(),
-                memberResponses
+                memberResponses,
+                latestMessagePreview
         );
     }
 }

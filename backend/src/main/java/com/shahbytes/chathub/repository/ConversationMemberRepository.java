@@ -1,9 +1,8 @@
 package com.shahbytes.chathub.repository;
 
-import com.shahbytes.chathub.api.dto.ConversationMemberResponse;
-import com.shahbytes.chathub.api.dto.MemberResponse;
+import com.shahbytes.chathub.api.dto.response.ConversationMemberResponse;
+import com.shahbytes.chathub.api.dto.response.MemberResponse;
 import com.shahbytes.chathub.domain.ConversationMember;
-import org.hibernate.sql.ast.tree.expression.Collation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,7 +19,7 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
     );
 
     @Query("""
-                SELECT new com.shahbytes.chathub.api.dto.MemberResponse(
+                SELECT new com.shahbytes.chathub.api.dto.response.MemberResponse(
                     cm.userId, u.displayName, cm.role, cm.lastReadSequence
                     )
                     FROM ConversationMember cm
@@ -33,8 +32,9 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
     );
 
     @Query("""
-                SELECT new com.shahbytes.chathub.api.dto.ConversationMemberResponse(
-                    cm.conversationId, cm.userId, u.displayName, cm.role, cm.lastReadSequence
+                SELECT new com.shahbytes.chathub.api.dto.response.ConversationMemberResponse(
+                    cm.conversationId, cm.userId, u.displayName, cm.role, cm.lastReadSequence,
+                                cm.hiddenAfterSequence
                     )
                     FROM ConversationMember cm
                         JOIN UserAccount u
@@ -56,4 +56,6 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
             UUID conversationId,
             UUID senderId
     );
+
+    List<ConversationMember> findAllByConversationId(UUID conversationId);
 }

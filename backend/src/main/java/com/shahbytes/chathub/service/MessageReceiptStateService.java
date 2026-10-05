@@ -15,24 +15,29 @@ public class MessageReceiptStateService {
     public Optional<ReceiptState> resolveForSender(
             Message message,
             UUID currentUserId,
-            Collection<MessageReceipt> receipts
+            Collection<MessageReceipt> receipts,
+            Collection<UUID> currentMemberIds
     ) {
         if (!message.getSenderId().equals(currentUserId)) {
             return Optional.empty();
         }
 
-        if (receipts == null || receipts.isEmpty()) {
+        var activeReceipts = receipts.stream()
+                .filter(receipt -> currentMemberIds.contains(receipt.getUserId()))
+                .toList();
+
+        if (activeReceipts.isEmpty()) {
             return Optional.of(ReceiptState.SENT);
         }
 
-        boolean allDelivered = receipts.stream()
+        boolean allDelivered = activeReceipts.stream()
                 .allMatch(receipt -> receipt.getDeliveredAt() != null);
 
         if (!allDelivered) {
             return Optional.of(ReceiptState.SENT);
         }
 
-        boolean allRead = receipts.stream()
+        boolean allRead = activeReceipts.stream()
                 .allMatch(receipt -> receipt.getReadAt() != null);
 
         if (!allRead) {

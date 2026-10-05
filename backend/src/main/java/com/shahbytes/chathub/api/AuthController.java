@@ -1,8 +1,8 @@
 package com.shahbytes.chathub.api;
 
-import com.shahbytes.chathub.api.dto.AuthResponse;
-import com.shahbytes.chathub.api.dto.LoginRequest;
-import com.shahbytes.chathub.api.dto.RegisterRequest;
+import com.shahbytes.chathub.api.dto.response.AuthResponse;
+import com.shahbytes.chathub.api.dto.request.LoginRequest;
+import com.shahbytes.chathub.api.dto.request.RegisterRequest;
 import com.shahbytes.chathub.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

@@ -1,9 +1,9 @@
 package com.shahbytes.chathub.api;
 
-import com.shahbytes.chathub.api.dto.AddMemberRequest;
-import com.shahbytes.chathub.api.dto.ConversationResponse;
-import com.shahbytes.chathub.api.dto.CreateConversationRequest;
-import com.shahbytes.chathub.api.dto.UpdateConversationRequest;
+import com.shahbytes.chathub.api.dto.request.AddMemberRequest;
+import com.shahbytes.chathub.api.dto.response.ConversationResponse;
+import com.shahbytes.chathub.api.dto.request.CreateConversationRequest;
+import com.shahbytes.chathub.api.dto.request.UpdateConversationRequest;
 import com.shahbytes.chathub.security.CurrentUser;
 import com.shahbytes.chathub.service.ConversationService;
 import jakarta.validation.Valid;
@@ -69,5 +69,22 @@ public class ConversationController {
             @Valid @RequestBody UpdateConversationRequest request
     ) {
         return conversationService.update(currentUser.id(authentication), conversationId, request);
+    }
+
+    @DeleteMapping("/{conversationId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(
+            Authentication authentication,
+            @PathVariable("conversationId") UUID conversationId,
+            @RequestParam(
+                    name = "permanent",
+                    defaultValue = "false"
+            ) boolean permanent
+    ) {
+        conversationService.deleteForUser(
+                currentUser.id(authentication),
+                conversationId,
+                permanent
+        );
     }
 }

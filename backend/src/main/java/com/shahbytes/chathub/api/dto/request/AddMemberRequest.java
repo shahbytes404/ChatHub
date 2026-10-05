@@ -1,0 +1,12 @@
+package com.shahbytes.chathub.api.dto.request;
+
+import com.shahbytes.chathub.domain.type.MemberRole;
+import jakarta.validation.constraints.NotNull;
+
+import java.util.UUID;
+
+public record AddMemberRequest(
+        @NotNull UUID userId,
+        @NotNull MemberRole role
+) {
+}
