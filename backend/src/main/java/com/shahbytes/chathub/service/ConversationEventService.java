@@ -40,7 +40,7 @@ public class ConversationEventService {
                             conversationId,
                             actorId,
                             null,
-                            conversationId,
+                            conversation,
                             Instant.now()
                     )
             );
