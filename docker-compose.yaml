@@ -3,7 +3,6 @@ networks:
     driver: bridge
 
 services:
-
   postgres:
     image: postgres:16-alpine
     container_name: chathub-postgres
@@ -16,7 +15,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgres/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U chathub -d chathub"]
+      test: [ "CMD-SHELL", "pg_isready -U chathub -d chathub" ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -49,12 +48,32 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: ["redis-server", "--appendonly","yes"]
+    command: [ "redis-server", "--appendonly","yes" ]
     healthcheck:
-      test: ["CMD","redis-cli", "ping"]
+      test: [ "CMD","redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 10
+    networks:
+      - chathub-network
+
+  backend:
+    build:
+      context: ./backend
+    container_name: chathub-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/chathub
+      SPRING_DATASOURCE_USERNAME: chathub
+      SPRING_DATASOURCE_PASSWORD: chathub
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - chathub-network
 
