@@ -1,0 +1,102 @@
+.appShell {
+  width: min(1600px, 100%);
+  height: min(calc(100vh - 36px), 960px);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  box-shadow: var(--shadow);
+  background: var(--panel);
+}
+
+.rail {
+  display: grid;
+  grid-template-rows: auto repeat(3, auto) 1fr;
+  gap: 14px;
+  padding: 14px 12px;
+  background: transparent;
+  border-right: 1px solid var(--line);
+}
+
+.railAvatar,
+.railIcon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.railAvatar {
+  background: linear-gradient(
+    135deg,
+    rgba(37, 211, 102, 0.3),
+    rgba(18, 140, 126, 0.75)
+  );
+  color: white;
+  font-weight: 800;
+}
+
+.railIconActive {
+  background: rgba(37, 211, 102, 0.14);
+  color: var(--accent);
+}
+
+.railIconDanger {
+  color: var(--danger);
+}
+
+.toast {
+  position: fixed;
+  top: 10px;
+  right: 20px;
+  z-index: 10;
+  max-width: min(420px, calc(100vw - 40px));
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.workspace {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 390px minmax(0, 1fr);
+  padding: 12px;
+  gap: 12px;
+  overflow: hidden;
+}
+
+@media (max-width: 860px) {
+  .appShell {
+    width: 100%;
+    height: 100vh;
+    margin: 0;
+    grid-template-columns: 1fr;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .rail {
+    grid-template-columns: repeat(4, auto);
+    grid-template-rows: auto;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+    padding: 10px;
+    gap: 10px;
+  }
+}
