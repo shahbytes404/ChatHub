@@ -2,7 +2,6 @@ import type { Conversation, SidebarMode } from "../../core/models";
 
 interface ConversationListProps {
   conversations: Conversation[];
-  allConversations: Conversation[];
   sidebarMode: SidebarMode;
   selectedId: string | null;
   onlineCount: number;
@@ -13,7 +12,6 @@ interface ConversationListProps {
 
 export function ConversationList({
   conversations,
-  allConversations,
   sidebarMode,
   selectedId,
   onlineCount,

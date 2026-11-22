@@ -105,8 +105,6 @@ export function ChatWorkspace({
       <section className={styles.workspace}>
         <ConversationList
           sidebarMode={sidebarMode}
-          allConversations={conversations}
-          // later we are also going to pass filtered here based on mode
           conversations={conversations}
           onlineCount={onlineCount}
           totalCount={totalCount}

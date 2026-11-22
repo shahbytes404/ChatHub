@@ -5,14 +5,6 @@ import { REALTIME_EVENTS } from "../core/constants";
 
 interface UseChatRealtimeOptions {
   accessToken: string | undefined;
-  conversations: Conversation[];
-  currentUserId: string | undefined;
-  selectedConversationId: string | null;
-
-  loadConversations: () => void | Promise<Conversation[] | undefined>;
-  upsertConversation: (conversation: Conversation) => void;
-  removeConversation: (conversationId: string) => void;
-  selectConversation: (conversation: Conversation) => void;
 
   /**
    * setConnected is a function that updates a React state variable whose value is a boolean.
@@ -35,13 +27,6 @@ interface UseChatRealtimeOptions {
 
 export function useChatRealtime({
   accessToken,
-  conversations,
-  currentUserId,
-  selectedConversationId,
-  loadConversations,
-  upsertConversation,
-  removeConversation,
-  selectConversation,
   setConnected,
 }: UseChatRealtimeOptions) {
   // we can pass it to caller to update its state, like typng or others
