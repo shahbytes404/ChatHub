@@ -30,14 +30,18 @@ export function ChatWorkspace({
           className={`${styles.railIcon} ${sidebarMode === "chats" ? styles.railIconActive : ""}`}
           type="button"
           title="Chats"
-          onClick={() => {}}>
+          onClick={() => {
+            setSidebarMode("chats");
+          }}>
           <MessageCircle size={18} />
         </button>
         <button
           className={`${styles.railIcon} ${sidebarMode === "search" ? styles.railIconActive : ""}`}
           type="button"
           title="Search chats"
-          onClick={() => {}}>
+          onClick={() => {
+            setSidebarMode("search");
+          }}>
           <Search size={18} />
         </button>
         <button
@@ -68,7 +72,7 @@ export function ChatWorkspace({
       ) : null}
 
       <section className={styles.workspace}>
-        <ConversationList />
+        <ConversationList sidebarMode={sidebarMode} />
         <ChatWindow />
       </section>
     </main>
