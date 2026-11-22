@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { AuthResponse, SidebarMode, ThemeMode } from "../../core/models";
 import { LogOut, MessageCircle, Moon, Search, Sun } from "lucide-react";
 import { authStore } from "../../core/auth-store";
 import styles from "./ChatWorkspace.module.css";
 import { ConversationList } from "./ConversationList";
 import { ChatWindow } from "./ChatWindow";
+import { useConversations } from "../../hooks/useConversations";
 
 interface ChatWorkspaceProps {
   session: AuthResponse;
@@ -19,6 +20,36 @@ export function ChatWorkspace({
 }: ChatWorkspaceProps) {
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>("chats");
   const [error, setError] = useState("");
+
+  const currentUserId = session.userId;
+  const currentUserName = session.displayName ?? "You";
+
+  const [selectedConversationId, setSelectedConversationId] = useState<
+    string | null
+  >(null);
+
+  const totalCount = 10;
+
+  const onlineCount = 5;
+
+  const {
+    conversations,
+    getConversation,
+    loadConversations,
+    upsertConversations,
+    removeConversation,
+    clearConversations,
+  } = useConversations({ currentUserId, onError: setError });
+
+  // load conversations
+  useEffect(() => {
+    const token = session.accessToken ?? null;
+    if (!token) {
+      return;
+    }
+
+    void loadConversations();
+  }, [loadConversations, session.accessToken]);
 
   return (
     <main className={styles.appShell}>
@@ -72,7 +103,17 @@ export function ChatWorkspace({
       ) : null}
 
       <section className={styles.workspace}>
-        <ConversationList sidebarMode={sidebarMode} />
+        <ConversationList
+          sidebarMode={sidebarMode}
+          allConversations={conversations}
+          // later we are also going to pass filtered here based on mode
+          conversations={conversations}
+          onlineCount={onlineCount}
+          totalCount={totalCount}
+          currentUserName={currentUserName}
+          currentUserId={currentUserId}
+          selectedId={selectedConversationId}
+        />
         <ChatWindow />
       </section>
     </main>

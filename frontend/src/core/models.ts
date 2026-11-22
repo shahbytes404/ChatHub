@@ -1,4 +1,8 @@
-import type { ConversationType, MemberRole } from "./constants";
+import type {
+  ConversationType,
+  MemberRole,
+  RealtimeEventType,
+} from "./constants";
 
 export type ThemeMode = "light" | "dark";
 
@@ -29,4 +33,14 @@ export interface Conversation {
   createdAt: string;
   members: Member[];
   latestMessagePreview?: string | null;
+}
+
+export interface RealtimeEvent {
+  type: RealtimeEventType | string;
+  targetUserId: string;
+  conversationId: string;
+  actorUserId: string;
+  messageID?: string;
+  payload?: unknown;
+  occurredAt: string;
 }

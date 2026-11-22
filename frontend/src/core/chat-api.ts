@@ -1,6 +1,6 @@
 import { authStore } from "./auth-store";
 import { appConfig } from "./config";
-import type { AuthResponse } from "./models";
+import type { AuthResponse, Conversation } from "./models";
 
 type RequestOptions = RequestInit & {
   query?: Record<string, string | number | boolean | undefined>;
@@ -76,6 +76,10 @@ class ChatApi {
       method: "POST",
       body: JSON.stringify(payload),
     });
+  }
+
+  conversations() {
+    return this.request<Conversation[]>("/conversations");
   }
 }
 
