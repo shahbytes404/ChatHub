@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { AuthResponse, SidebarMode, ThemeMode } from "../../core/models";
 import { LogOut, MessageCircle, Moon, Search, Sun } from "lucide-react";
 import { authStore } from "../../core/auth-store";
@@ -6,6 +6,8 @@ import styles from "./ChatWorkspace.module.css";
 import { ConversationList } from "./ConversationList";
 import { ChatWindow } from "./ChatWindow";
 import { useConversations } from "../../hooks/useConversations";
+import { useChatSelection } from "../../hooks/useChatSelection";
+import { useMessages } from "../../hooks/useMessages";
 
 interface ChatWorkspaceProps {
   session: AuthResponse;
@@ -41,6 +43,20 @@ export function ChatWorkspace({
     clearConversations,
   } = useConversations({ currentUserId, onError: setError });
 
+  const { messagesByConversation, selectedMessages, loadMessages } =
+    useMessages({
+      getConversation,
+      currentUserId,
+      selectedConversationId,
+      onError: setError,
+    });
+
+  const { selectConversation } = useChatSelection({
+    currentUserId,
+    setSelectedConversationId,
+    loadMessages,
+  });
+
   // load conversations
   useEffect(() => {
     const token = session.accessToken ?? null;
@@ -50,6 +66,14 @@ export function ChatWorkspace({
 
     void loadConversations();
   }, [loadConversations, session.accessToken]);
+
+  const selectedConversation = useMemo(
+    () =>
+      conversations.find(
+        (conversation) => conversation.id === selectedConversationId,
+      ) ?? null,
+    [conversations, selectedConversationId],
+  );
 
   return (
     <main className={styles.appShell}>
@@ -111,8 +135,17 @@ export function ChatWorkspace({
           currentUserName={currentUserName}
           currentUserId={currentUserId}
           selectedId={selectedConversationId}
+          onSelectConversation={(conversation) => {
+            void selectConversation(conversation);
+          }}
+          onNewConversation={() => {}}
+          onDeleteConversation={() => {}}
         />
-        <ChatWindow />
+        <ChatWindow
+          conversation={selectedConversation}
+          messages={selectedMessages}
+          currentUserId={currentUserId}
+        />
       </section>
     </main>
   );

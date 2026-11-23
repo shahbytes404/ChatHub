@@ -32,3 +32,18 @@ export function mergeLocalReadProgress(
     ),
   };
 }
+
+export const getConversationTitle = (
+  conversation: Conversation,
+  currentUserId: string | undefined,
+) => {
+  if (conversation.type === "GROUP" && conversation.title) {
+    return conversation.title;
+  }
+
+  // for groups, use "," otherwise one for direct
+  return conversation.members
+    .filter((member) => member.userId !== currentUserId)
+    .map((member) => member.displayName)
+    .join(", ");
+};

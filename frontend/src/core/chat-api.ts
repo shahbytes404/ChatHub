@@ -1,6 +1,6 @@
 import { authStore } from "./auth-store";
 import { appConfig } from "./config";
-import type { AuthResponse, Conversation } from "./models";
+import type { AuthResponse, Conversation, MessagePage } from "./models";
 
 type RequestOptions = RequestInit & {
   query?: Record<string, string | number | boolean | undefined>;
@@ -80,6 +80,15 @@ class ChatApi {
 
   conversations() {
     return this.request<Conversation[]>("/conversations");
+  }
+
+  messages(conversationId: string, afterSequence = 0, size = 80) {
+    return this.request<MessagePage>(
+      `/conversations/${conversationId}/messages`,
+      {
+        query: { afterSequence, size },
+      },
+    );
   }
 }
 
