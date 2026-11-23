@@ -34,3 +34,25 @@ export const REALTIME_EVENTS = {
 
 export type RealtimeEventType =
   (typeof REALTIME_EVENTS)[keyof typeof REALTIME_EVENTS];
+
+export const RECEIPT_STATES = {
+  SENT: "SENT",
+  DELIVERED: "DELIVERED",
+  READ: "READ",
+} as const;
+
+export type ReceiptState = (typeof RECEIPT_STATES)[keyof typeof RECEIPT_STATES];
+
+export const RECEIPT_TYPES = {
+  DELIVERED: "DELIVERED",
+  READ: "READ",
+} as const;
+
+export type ReceiptType = (typeof RECEIPT_TYPES)[keyof typeof RECEIPT_TYPES];
+
+export const MESSAGE_TYPES = {
+  TEXT: "TEXT",
+  SYSTEM: "SYSTEM",
+} as const;
+
+export type MessageType = (typeof MESSAGE_TYPES)[keyof typeof MESSAGE_TYPES];
