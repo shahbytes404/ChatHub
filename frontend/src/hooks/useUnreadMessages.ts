@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ChatMessage, Conversation } from "../core/models";
-import { calculateUnreadCount } from "../utils/message-utils";
+import { calculateUnreadCount } from "../utils/conversation-utils";
 
 interface UseUnreadMessagesOptions {
   currentUserId: string | undefined;

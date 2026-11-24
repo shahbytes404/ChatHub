@@ -19,26 +19,3 @@ export const receiptStateForMessage = (
 
   return message.receiptState ?? "SENT";
 };
-
-export function calculateUnreadCount(
-  conversation: Conversation | undefined,
-  messages: ChatMessage[],
-  currentUserId: string | undefined,
-): number {
-  if (!conversation || !currentUserId) {
-    return 0;
-  }
-
-  const myself = conversation.members.find(
-    (member) => member.userId === currentUserId,
-  );
-
-  if (!myself) {
-    return 0;
-  }
-
-  return messages
-    .filter((message) => message.senderId !== currentUserId)
-    .filter((message) => message.sequenceNumber > myself.lastReadSequence)
-    .length;
-}
