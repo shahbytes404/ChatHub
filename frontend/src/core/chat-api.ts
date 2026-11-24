@@ -1,6 +1,11 @@
 import { authStore } from "./auth-store";
 import { appConfig } from "./config";
-import type { AuthResponse, Conversation, MessagePage } from "./models";
+import type {
+  AuthResponse,
+  ChatMessage,
+  Conversation,
+  MessagePage,
+} from "./models";
 
 type RequestOptions = RequestInit & {
   query?: Record<string, string | number | boolean | undefined>;
@@ -89,6 +94,23 @@ class ChatApi {
         query: { afterSequence, size },
       },
     );
+  }
+
+  sendMessage(conversationId: string, content: string) {
+    return this.request<ChatMessage>(
+      `/conversations/${conversationId}/messages`,
+      {
+        method: "POST",
+        body: JSON.stringify({ content, clientMessageId: crypto.randomUUID() }),
+      },
+    );
+  }
+
+  deleteConversation(conversationId: string, permanent = false) {
+    return this.request<void>(`/conversations/${conversationId}`, {
+      method: "DELETE",
+      query: { permanent },
+    });
   }
 }
 

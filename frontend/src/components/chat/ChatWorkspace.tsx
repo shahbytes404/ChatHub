@@ -8,6 +8,8 @@ import { ChatWindow } from "./ChatWindow";
 import { useConversations } from "../../hooks/useConversations";
 import { useChatSelection } from "../../hooks/useChatSelection";
 import { useMessages } from "../../hooks/useMessages";
+import { useUnreadMessages } from "../../hooks/useUnreadMessages";
+import { useChatActions } from "../../hooks/useChatActions";
 
 interface ChatWorkspaceProps {
   session: AuthResponse;
@@ -38,23 +40,58 @@ export function ChatWorkspace({
     conversations,
     getConversation,
     loadConversations,
+    updateConversationPreview,
     upsertConversations,
     removeConversation,
     clearConversations,
   } = useConversations({ currentUserId, onError: setError });
 
-  const { messagesByConversation, selectedMessages, loadMessages } =
-    useMessages({
-      getConversation,
-      currentUserId,
-      selectedConversationId,
-      onError: setError,
-    });
+  const {
+    unreadByConversation,
+    setUnreadByConversation,
+    clearUnread,
+    refreshUnread,
+    clearUnreadMessages,
+  } = useUnreadMessages({
+    currentUserId,
+    getConversation,
+  });
+
+  const {
+    messagesByConversation,
+    selectedMessages,
+    loadMessages,
+    appendMessage,
+    removeConversationMessages,
+  } = useMessages({
+    getConversation,
+    currentUserId,
+    selectedConversationId,
+    onUpdateConversationPreview: updateConversationPreview,
+    onError: setError,
+  });
 
   const { selectConversation } = useChatSelection({
     currentUserId,
     setSelectedConversationId,
     loadMessages,
+  });
+
+  const selectedConversation = useMemo(
+    () =>
+      conversations.find(
+        (conversation) => conversation.id === selectedConversationId,
+      ) ?? null,
+    [conversations, selectedConversationId],
+  );
+
+  const { sendMessage, deleteConversation } = useChatActions({
+    currentUserId,
+    selectedConversation,
+    appendMessage,
+    removeConversation,
+    removeConversationMessages,
+    onError: setError,
   });
 
   // load conversations
@@ -66,14 +103,6 @@ export function ChatWorkspace({
 
     void loadConversations();
   }, [loadConversations, session.accessToken]);
-
-  const selectedConversation = useMemo(
-    () =>
-      conversations.find(
-        (conversation) => conversation.id === selectedConversationId,
-      ) ?? null,
-    [conversations, selectedConversationId],
-  );
 
   return (
     <main className={styles.appShell}>
@@ -139,12 +168,18 @@ export function ChatWorkspace({
             void selectConversation(conversation);
           }}
           onNewConversation={() => {}}
-          onDeleteConversation={() => {}}
+          onDeleteConversation={({ conversation, permanent }) => {
+            void deleteConversation(conversation, permanent);
+          }}
+          unreadByConversation={unreadByConversation}
         />
         <ChatWindow
           conversation={selectedConversation}
           messages={selectedMessages}
           currentUserId={currentUserId}
+          onSendMessage={(content) => {
+            void sendMessage(content);
+          }}
         />
       </section>
     </main>

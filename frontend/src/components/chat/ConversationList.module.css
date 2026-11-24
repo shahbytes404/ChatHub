@@ -1,0 +1,127 @@
+.sidebar {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  /* Size the first two rows to their content and give the third the remaining space. */
+  grid-template-rows: auto auto 1fr;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.sidebarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sidebarTitle {
+  font-size: 17px;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.sidebarActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Target descendants of the local sidebarActions class with the global icon-button class. */
+.sidebarActions :global(.icon-button) {
+  width: 36px;
+  height: 36px;
+}
+
+.conversationList {
+  overflow: auto;
+  padding: 10px 8px 12px;
+}
+
+.conversationRow {
+  width: 100%;
+  display: grid;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 16px;
+  margin-bottom: 4px;
+}
+
+.conversationRow {
+  /* Fix the first column at 44px, size the last to its content, and give the middle the remaining width. */
+  grid-template-columns: 44px 1fr auto;
+}
+
+.conversationRowActive,
+.conversationRow:hover {
+  background: var(--surface-hover);
+}
+
+.conversationCopy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.conversationTopline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.conversationName,
+.conversationPreview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversationTime {
+  color: var(--muted);
+}
+
+.rowActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.deleteMenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 10;
+  min-width: 180px;
+  display: grid;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 12px 24px rgba(16, 35, 28, 0.16);
+  overflow: hidden;
+}
+
+.deleteMenuItem {
+  border: 0;
+  background: var(--surface);
+  text-align: left;
+  padding: 10px 12px;
+  color: var(--text);
+}
+
+.deleteMenuItem:hover {
+  background: var(--surface-hover);
+}
+
+.deleteMenuItemDanger {
+  color: #b42318;
+}

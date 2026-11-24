@@ -82,6 +82,22 @@ export function useConversations({
     });
   };
 
+  const updateConversationPreview = (
+    conversationId: string,
+    preview: string,
+  ) => {
+    setConversations((items) =>
+      items.map((conversation) =>
+        conversation.id === conversationId
+          ? {
+              ...conversation,
+              latestMessagePreview: preview,
+            }
+          : conversation,
+      ),
+    );
+  };
+
   const removeConversation = (conversationId: string) => {
     setConversations((prevConv) =>
       prevConv.filter((conv) => conv.id !== conversationId),
@@ -100,5 +116,6 @@ export function useConversations({
     clearConversations,
     upsertConversations,
     removeConversation,
+    updateConversationPreview,
   };
 }
