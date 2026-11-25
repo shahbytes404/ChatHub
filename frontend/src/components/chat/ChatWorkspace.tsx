@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AuthResponse, SidebarMode, ThemeMode } from "../../core/models";
+import type {
+  AuthResponse,
+  PickerMode,
+  SidebarMode,
+  ThemeMode,
+} from "../../core/models";
 import { LogOut, MessageCircle, Moon, Search, Sun } from "lucide-react";
 import { authStore } from "../../core/auth-store";
 import styles from "./ChatWorkspace.module.css";
@@ -10,6 +15,8 @@ import { useChatSelection } from "../../hooks/useChatSelection";
 import { useMessages } from "../../hooks/useMessages";
 import { useUnreadMessages } from "../../hooks/useUnreadMessages";
 import { useChatActions } from "../../hooks/useChatActions";
+import { MEMBER_ROLES } from "../../core/constants";
+import { ContactPicker } from "./ContactPicker";
 
 interface ChatWorkspaceProps {
   session: AuthResponse;
@@ -28,9 +35,12 @@ export function ChatWorkspace({
   const currentUserId = session.userId;
   const currentUserName = session.displayName ?? "You";
 
+  const [pickerMode, setPickerMode] = useState<PickerMode>("direct");
+
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | null
   >(null);
+  const [showContactPicker, setShowContactPicker] = useState(false);
 
   const totalCount = 10;
 
@@ -85,9 +95,16 @@ export function ChatWorkspace({
     [conversations, selectedConversationId],
   );
 
-  const { sendMessage, deleteConversation } = useChatActions({
+  const {
+    sendMessage,
+    deleteConversation,
+    handlePickedUser: executePickedUser,
+  } = useChatActions({
     currentUserId,
     selectedConversation,
+    conversations,
+    upsertConversation: upsertConversations,
+    selectConversation,
     appendMessage,
     removeConversation,
     removeConversationMessages,
@@ -103,6 +120,14 @@ export function ChatWorkspace({
 
     void loadConversations();
   }, [loadConversations, session.accessToken]);
+
+  const excludedPickerIds =
+    selectedConversation?.members.map((member) => member.userId) ?? [];
+
+  const canAssignOwner =
+    selectedConversation?.members.find(
+      (member) => member.userId === currentUserId,
+    )?.role === MEMBER_ROLES.OWNER;
 
   return (
     <main className={styles.appShell}>
@@ -167,7 +192,10 @@ export function ChatWorkspace({
           onSelectConversation={(conversation) => {
             void selectConversation(conversation);
           }}
-          onNewConversation={() => {}}
+          onNewConversation={() => {
+            setPickerMode("direct");
+            setShowContactPicker(true);
+          }}
           onDeleteConversation={({ conversation, permanent }) => {
             void deleteConversation(conversation, permanent);
           }}
@@ -182,6 +210,19 @@ export function ChatWorkspace({
           }}
         />
       </section>
+
+      {showContactPicker ? (
+        <ContactPicker
+          mode={pickerMode}
+          canAssignOwner={canAssignOwner}
+          excludedUserIds={pickerMode === "add" ? excludedPickerIds : []}
+          onClose={() => setShowContactPicker(false)}
+          onSelectUser={(selection) => {
+            setShowContactPicker(false);
+            void executePickedUser(selection, pickerMode);
+          }}
+        />
+      ) : null}
     </main>
   );
 }

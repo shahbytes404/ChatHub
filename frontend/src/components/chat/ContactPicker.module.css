@@ -1,0 +1,122 @@
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.modalSheet {
+  width: min(560px, 100%);
+  max-height: min(720px, calc(100vh - 40px));
+  display: grid;
+  grid-template-rows: auto auto auto 1fr;
+  background: var(--panel);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--panel-strong), var(--panel));
+}
+
+.modalTitle,
+.modalCopy {
+  margin: 0;
+}
+
+.modalClose {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.searchField {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 14px 0;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.searchInput {
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  min-height: 42px;
+  padding: 0;
+}
+
+.roleField {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 10px;
+  margin: 0 14px 14px;
+}
+
+.roleSelect {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 8px;
+  outline: none;
+}
+
+.contactList {
+  overflow: auto;
+}
+
+.contactRow {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  text-align: left;
+  padding: 12px 14px;
+  color: var(--text);
+}
+
+.contactRow:hover {
+  background: var(--surface-hover);
+}
+
+.contactCopy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.contactName,
+.contactEmail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

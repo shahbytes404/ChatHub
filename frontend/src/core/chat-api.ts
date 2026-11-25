@@ -1,10 +1,12 @@
 import { authStore } from "./auth-store";
 import { appConfig } from "./config";
+import type { ConversationType, MemberRole } from "./constants";
 import type {
   AuthResponse,
   ChatMessage,
   Conversation,
   MessagePage,
+  UserSummary,
 } from "./models";
 
 type RequestOptions = RequestInit & {
@@ -111,6 +113,35 @@ class ChatApi {
       method: "DELETE",
       query: { permanent },
     });
+  }
+
+  createConversation(payload: {
+    type: ConversationType;
+    title?: string | null;
+    memberIds: string[];
+  }) {
+    return this.request<Conversation>("/conversations", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  addMember(
+    conversationId: string,
+    userId: string,
+    role: MemberRole = "MEMBER",
+  ) {
+    return this.request<Conversation>(
+      `/conversations/${conversationId}/members`,
+      {
+        method: "POST",
+        body: JSON.stringify({ userId, role }),
+      },
+    );
+  }
+
+  users(query = "") {
+    return this.request<UserSummary[]>("/users", { query: { q: query } });
   }
 }
 

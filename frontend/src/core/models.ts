@@ -69,3 +69,16 @@ export interface MessagePage {
   hasMore: boolean;
   nextAfterSequence: number | null;
 }
+
+export interface UserSummary {
+  id: string;
+  displayName: string;
+  email: string;
+}
+
+export type PickerMode = "direct" | "add";
+
+export interface ContactSelection {
+  user: UserSummary;
+  role?: MemberRole;
+}
