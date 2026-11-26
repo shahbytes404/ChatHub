@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
 
@@ -22,10 +22,10 @@ jobs:
 
       - name: Check backend and pgAdmin HTTP endpoints
         run: |
-          health=$(curl --fail --silent --show-error --retry 30 --retry-connrefused \
+          health=$(curl --fail --silent --show-error --retry 30 --retry-all-errors \
             --retry-delay 2 --max-time 5 http://127.0.0.1:8080/actuator/health)
           jq -e '.status == "UP"' <<< "$health"
-          curl --fail --silent --show-error --retry 30 --retry-connrefused \
+          curl --fail --silent --show-error --retry 30 --retry-all-errors \
             --retry-delay 2 --max-time 5 http://127.0.0.1:5050/misc/ping
 
       - name: Show diagnostics on failure
