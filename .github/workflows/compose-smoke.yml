@@ -14,11 +14,18 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Build and start the stack
+      - name: Validate and build the stack
         run: |
           docker compose version
           docker compose config --quiet
-          docker compose up --build --wait --wait-timeout 180
+          # Give transient registry and Maven download failures one retry.
+          if ! docker compose build; then
+            sleep 15
+            docker compose build
+          fi
+
+      - name: Start the stack
+        run: docker compose up --no-build --wait --wait-timeout 180
 
       - name: Check backend and pgAdmin HTTP endpoints
         run: |
