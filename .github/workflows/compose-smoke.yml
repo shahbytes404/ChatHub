@@ -1,0 +1,39 @@
+name: Docker Compose smoke test
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build and start the stack
+        run: |
+          docker compose version
+          docker compose config --quiet
+          docker compose up --build --wait --wait-timeout 180
+
+      - name: Check backend and pgAdmin HTTP endpoints
+        run: |
+          health=$(curl --fail --silent --show-error --retry 30 --retry-connrefused \
+            --retry-delay 2 --max-time 5 http://127.0.0.1:8080/actuator/health)
+          jq -e '.status == "UP"' <<< "$health"
+          curl --fail --silent --show-error --retry 30 --retry-connrefused \
+            --retry-delay 2 --max-time 5 http://127.0.0.1:5050/misc/ping
+
+      - name: Show diagnostics on failure
+        if: failure()
+        run: |
+          docker compose ps --all
+          docker compose logs --no-color --tail=200
+
+      - name: Remove the test stack
+        if: always()
+        run: docker compose down --volumes
